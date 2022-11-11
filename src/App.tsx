@@ -1,6 +1,6 @@
-import { Cuboid } from "./anim-3d/components/Cuboid";
-import { Ribbon } from "./anim-3d/components/Ribbon";
-import { AnimSpecsProps } from "./anim-3d/components/styles/Anim";
+import { Cuboid } from "./components/Cuboid";
+import { Ribbon } from "./components/Ribbon";
+import { AnimSpecsProps } from "./components/styles/Anim";
 //import { Cuboid,Card } from "anim-3d-objs";
 
 function App() {
