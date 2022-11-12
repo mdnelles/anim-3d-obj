@@ -16,7 +16,7 @@ function App() {
    const global: object = {
       // // face individual styles (over rides global)
       css: `
-         border: 1px solid #900;
+         border: 1px solid #090;
          background-color: red;
          color:white;
          opacity: 0.7;

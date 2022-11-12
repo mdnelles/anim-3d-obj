@@ -1,4 +1,3 @@
-import React from "react";
 import { AnimWrap } from "./styles/AnimWrap";
 import { SceneStyle } from "./styles/Scene";
 import { ObjProps } from "./Face/face";
