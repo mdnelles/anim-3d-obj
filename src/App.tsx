@@ -1,5 +1,5 @@
 import { Ribbon } from "./components/Ribbon";
-//import { Cuboid,Card } from "anim-3d-objs";
+//import { Cuboid,Card } from "anim-3d-obj";
 
 function App() {
    const faceprops = {
@@ -67,6 +67,7 @@ function App() {
       },
       back: {
          css: `
+         margin-bottom:10px;
          background:rgba(220,0,0,.5);
          backface-visibility: visible;
          color:white;         
