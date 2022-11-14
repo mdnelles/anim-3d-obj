@@ -1,6 +1,4 @@
-import { Cuboid } from "./components/Cuboid";
 import { Ribbon } from "./components/Ribbon";
-import { AnimSpecsProps } from "./components/styles/Anim";
 //import { Cuboid,Card } from "anim-3d-objs";
 
 function App() {
@@ -11,6 +9,10 @@ function App() {
       right: true,
       top: true,
       bottom: true,
+   };
+
+   const Example90 = () => {
+      return <div style={{ color: "red" }}>SOME LONG TEXT OVER HERE</div>;
    };
 
    const global: object = {
@@ -26,27 +28,27 @@ function App() {
       body: " ",
    };
    const anim1Specs: object = {
-      border: "wobX",
-      degreesHi: -45, // degrees if spin
-      degreesLow: 45, // degrees if spin
+      border: "",
+      degreesHi: -15, // degrees if spin
+      degreesLow: 15, // degrees if spin
       delay: 0,
       direction: "normal", //normal altenating reverse
       duration: 8,
       fillMode: "forward", // node forward backward both
       iterationCount: "infinite",
-      name: "Y360",
+      name: "wobY",
       timing: "ease-in-out", // linear ease ease-in-out
    };
    const anim2Specs: object = {
       border: "",
-      degreesHi: 0, // degrees if spin
-      degreesLow: 180, // degrees if spin
-      delay: 2,
+      degreesHi: 15, // degrees if spin
+      degreesLow: -15, // degrees if spin
+      delay: 0,
       direction: "normal", //normal altenating reverse
-      duration: 8,
+      duration: 28,
       fillMode: "forward", // node forward backward both
       iterationCount: "infinite",
-      name: "Y360",
+      name: "wobX",
       timing: "ease-in-out", // linear ease ease-in-out
    };
 
@@ -54,20 +56,18 @@ function App() {
       // face individual styles (over rides global)
       bottom: {
          css: `
-         background-color: #F00;
-         opacity: 0.7;
+         background:rgba(0,220,0,.5);
          backface-visibility: visible;
          font-size:30px;
          text-align:center;
          line-height:8;
          color:white;
          `,
-         body: " ",
+         body: <Example90 />,
       },
       back: {
          css: `
-         background-color: #900;
-         opacity: 0.7;
+         background:rgba(220,0,0,.5);
          backface-visibility: visible;
          color:white;         
          font-size:30px;
@@ -78,24 +78,23 @@ function App() {
       },
       topr: {
          css: `
-         background-color: #500;
-         opacity: 0.7;
+         background:rgba(22,22,22,.5);
          backface-visibility: visible;
          font-size:30px;
          text-align:center;
          line-height:8;
          color:white;
             `,
-         body: "TOPR",
+         body: <Example90 />,
       },
    };
 
    return (
       <div style={{ padding: 150 }}>
-         <Cuboid
-            width={300}
-            height={400}
-            depth={600}
+         <Ribbon
+            width={100}
+            height={550}
+            depth={1250}
             perspectiveOrigin='50% 50%'
             perspective={900}
             zIndex={10}
@@ -104,9 +103,10 @@ function App() {
             anim2Specs={anim2Specs}
             faces={faceprops}
             global={global}
+            showCenterDiv={false}
          >
             {}
-         </Cuboid>
+         </Ribbon>
          <div style={{ padding: 5 }} />
       </div>
    );
