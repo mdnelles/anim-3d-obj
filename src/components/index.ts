@@ -1,6 +1,4 @@
-import Face from "./Face";
-import Cuboid from "./Cuboid";
-import Card from "./Card";
-import Ribbon from "./Ribbon";
+import * as Face from "./Face";
+import * as Obj from "./Obj";
 
-export { Face, Cuboid, Card, Ribbon };
+export { Face, Obj };

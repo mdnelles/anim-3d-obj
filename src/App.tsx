@@ -1,28 +1,29 @@
-import Ribbon from "./components/Ribbon";
 //import { Cuboid,Card } from "anim-3d-obj";
+
+import Obj from "./components/Obj";
 
 function App() {
    const faceprops = {
       front: true,
       back: true,
-      left: true,
-      right: true,
+      left: false,
+      right: false,
       top: true,
+      top_rear: true,
+      top_front: true,
+      bottom_rear: true,
+      bottom_front: true,
       bottom: true,
-   };
-
-   const Example90 = () => {
-      return <div style={{ color: "red" }}>SOME LONG TEXT OVER HERE</div>;
    };
 
    const global: object = {
       // // face individual styles (over rides global)
       css: `
-         border: 1px solid #090;
-         background-color: red;
-         color:white;
-         opacity: 0.7;
+         border: 2px solid #333;
+         color:#333;
          backface-visibility: visible;
+         text-align:center;
+         line-height:12;
          font-family: Arial, Helvetica, sans-serif;
          `,
       body: " ",
@@ -36,7 +37,7 @@ function App() {
       duration: 8,
       fillMode: "forward", // node forward backward both
       iterationCount: "infinite",
-      name: "wobY",
+      name: "Y360",
       timing: "ease-in-out", // linear ease ease-in-out
    };
    const anim2Specs: object = {
@@ -45,57 +46,83 @@ function App() {
       degreesLow: -15, // degrees if spin
       delay: 0,
       direction: "normal", //normal altenating reverse
-      duration: 28,
+      duration: 18,
       fillMode: "forward", // node forward backward both
       iterationCount: "infinite",
-      name: "wobX",
+      name: "X360",
       timing: "ease-in-out", // linear ease ease-in-out
    };
 
    const custom: object = {
       // face individual styles (over rides global)
       bottom: {
-         css: `
-         background:rgba(0,220,0,.5);
-         backface-visibility: visible;
-         font-size:30px;
-         text-align:center;
-         line-height:8;
-         color:white;
-         `,
-         body: <Example90 />,
+         css: ``,
+         body: "BOTTOM",
+      },
+      front: {
+         css: ``,
+         body: "Front",
       },
       back: {
-         css: `
-         margin-bottom:10px;
-         background:rgba(220,0,0,.5);
-         backface-visibility: visible;
-         color:white;         
-         font-size:30px;
-         text-align:center;
-         line-height:8;
-         `,
+         css: ``,
          body: "BACK",
       },
-      topr: {
+      top_rear: {
          css: `
-         background:rgba(22,22,22,.5);
+         border:2px solid pink;
          backface-visibility: visible;
-         font-size:30px;
+         font-size:20px;
          text-align:center;
-         line-height:8;
-         color:white;
+         line-height:9;
+         color:pink;
             `,
-         body: <Example90 />,
+         body: "T-REAR",
+      },
+      top_front: {
+         css: `
+         border:2px solid pink;
+         backface-visibility: visible;
+         font-size:20px;
+         text-align:center;
+         line-height:9;
+         color:pink;
+            `,
+         body: "T-FRONT",
+      },
+      top: {
+         css: ``,
+         body: "TOP",
+      },
+      bottom_rear: {
+         css: `
+         border:2px solid red;
+         backface-visibility: visible;
+         font-size:20px;
+         text-align:center;
+         line-height:9;
+         color:#900;
+            `,
+         body: "B-REAR",
+      },
+      bottom_front: {
+         css: `
+         border:2px solid red;
+         backface-visibility: visible;
+         font-size:20px;
+         text-align:center;
+         line-height:9;
+         color:#900;
+            `,
+         body: "B-FRONT",
       },
    };
 
    return (
-      <div style={{ padding: 150 }}>
-         <Ribbon
+      <div style={{ padding: 300 }}>
+         <Obj
             width={100}
-            height={550}
-            depth={1250}
+            height={210}
+            depth={210}
             perspectiveOrigin='50% 50%'
             perspective={900}
             zIndex={10}
@@ -107,7 +134,7 @@ function App() {
             showCenterDiv={false}
          >
             {}
-         </Ribbon>
+         </Obj>
          <div style={{ padding: 5 }} />
       </div>
    );
