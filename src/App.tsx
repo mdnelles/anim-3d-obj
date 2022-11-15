@@ -1,4 +1,4 @@
-import { Ribbon } from "./components/Ribbon";
+import Ribbon from "./components/Ribbon";
 //import { Cuboid,Card } from "anim-3d-obj";
 
 function App() {
