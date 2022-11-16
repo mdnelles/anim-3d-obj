@@ -45,10 +45,10 @@
       ]
    },
    "devDependencies": {
-      "@types/styled-components": "^5.1.26",
       "@babel/cli": "^7.19.3",
       "@babel/core": "^7.20.2",
-      "@babel/preset-env": "^7.20.2"
+      "@babel/preset-env": "^7.20.2",
+      "@types/styled-components": "^5.1.26"
    },
    "keywords": [
       "React",
