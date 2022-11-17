@@ -7,8 +7,8 @@ import { ObjWrapper } from "./styles/Global";
 
 export const Cuboid = (props: ObjProps): any => {
    let {
-      anim1Specs,
-      anim2Specs,
+      anim1,
+      anim2,
       width = 5,
       height = 5,
       depth = 5,
@@ -44,8 +44,8 @@ export const Cuboid = (props: ObjProps): any => {
          perspectiveOrigin={perspectiveOrigin}
          zIndex={zIndex}
       >
-         <AnimWrap animSpecs={anim1Specs}>
-            <AnimWrap animSpecs={anim2Specs}>
+         <AnimWrap animSpecs={anim1}>
+            <AnimWrap animSpecs={anim2}>
                <ObjWrapper>
                   {!!faces && !!faces.front ? buildFace("front") : null}
                   {!!faces && !!faces.right ? buildFace("right") : null}

@@ -17,10 +17,10 @@ The program does the leg work with regard to calculating translationZ depth and 
 
 ## Config
 
-Animations are optional. Either or both of `anim1Specs` or `anim2Specs` can be applied to the object.
+Animations are optional. Either or both of `anim1` or `anim2` can be applied to the object.
 
 ```typescript
-const anim1Specs: object = {
+const anim1: object = {
    border: "", // while testing reveal the animation wrapper
    degreesHi: -45, // degrees if spin
    degreesLow: 45, // degrees if spin
@@ -133,8 +133,8 @@ and
    perspective={800}
    perspectiveOrigin='50% 50%'
    zIndex={10}
-   anim1Specs={anim1Specs}
-   anim2Specs={anim2Specs}
+   anim1={anim1}
+   anim2={anim2}
    custom={custom}
    faces={faceprops}
    global={global}

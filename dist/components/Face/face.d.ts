@@ -12,8 +12,8 @@ export interface FaceProps {
 }
 
 export interface ObjProps {
-   anim1Specs?: object | undefined;
-   anim2Specs?: object | undefined;
+   anim1?: object | undefined;
+   anim2?: object | undefined;
    children: any;
    depth?: number;
    global?: { border?: string; bgc?: string; opac?: number | string } | any;

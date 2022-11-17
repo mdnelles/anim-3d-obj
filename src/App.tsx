@@ -28,7 +28,7 @@ function App() {
          `,
       body: " ",
    };
-   const anim1Specs: object = {
+   const anim1: object = {
       border: "",
       degreesHi: -15, // degrees if spin
       degreesLow: 15, // degrees if spin
@@ -40,7 +40,7 @@ function App() {
       name: "Y360",
       timing: "ease-in-out", // linear ease ease-in-out
    };
-   const anim2Specs: object = {
+   const anim2: object = {
       border: "",
       degreesHi: 15, // degrees if spin
       degreesLow: -15, // degrees if spin
@@ -125,8 +125,8 @@ function App() {
             perspective={900}
             zIndex={10}
             custom={custom}
-            anim1Specs={anim1Specs}
-            anim2Specs={anim2Specs}
+            anim1={anim1}
+            anim2={anim2}
             faces={faceprops}
             global={global}
             showCenterDiv={false}
