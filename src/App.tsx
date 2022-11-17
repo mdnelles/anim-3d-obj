@@ -6,8 +6,8 @@ function App() {
    const faceprops = {
       front: true,
       back: true,
-      left: false,
-      right: false,
+      left: true,
+      right: true,
       top: true,
       top_rear: true,
       top_front: true,
@@ -19,11 +19,11 @@ function App() {
    const global: object = {
       // // face individual styles (over rides global)
       css: `
-         border: 2px solid #333;
+         border: 1px solid #333;
          color:#333;
          backface-visibility: visible;
          text-align:center;
-         line-height:12;
+         line-height:10;
          font-family: Arial, Helvetica, sans-serif;
          `,
       body: " ",
@@ -53,6 +53,12 @@ function App() {
       timing: "ease-in-out", // linear ease ease-in-out
    };
 
+   const details = `backface-visibility: visible;
+   font-size:20px;
+   text-align:center;
+   font-family: Arial, Helvetica, sans-serif;
+   line-height:9;`;
+
    const custom: object = {
       // face individual styles (over rides global)
       bottom: {
@@ -61,68 +67,60 @@ function App() {
       },
       front: {
          css: ``,
-         body: "Front",
+         body: "FRONT",
       },
       back: {
          css: ``,
          body: "BACK",
       },
       top_rear: {
-         css: `
+         css: `${details}
          border:2px solid pink;
-         backface-visibility: visible;
-         font-size:20px;
-         text-align:center;
-         line-height:9;
          color:pink;
             `,
-         body: "T-REAR",
+         body: "TOP-REAR",
       },
       top_front: {
-         css: `
-         border:2px solid pink;
-         backface-visibility: visible;
-         font-size:20px;
-         text-align:center;
-         line-height:9;
-         color:pink;
+         css: `${details}
+         border:2px solid #00F;
+         color:#00F;
             `,
-         body: "T-FRONT",
+         body: "TOP-FRONT",
       },
       top: {
          css: ``,
          body: "TOP",
       },
+      left: {
+         css: ``,
+         body: "LEFT",
+      },
+      right: {
+         css: ``,
+         body: "RIGHT",
+      },
       bottom_rear: {
-         css: `
-         border:2px solid red;
-         backface-visibility: visible;
-         font-size:20px;
-         text-align:center;
-         line-height:9;
-         color:#900;
+         css: `${details}
+         border:2px solid #090;
+         color: #090;
             `,
-         body: "B-REAR",
+         body: "BACK-REAR",
       },
       bottom_front: {
-         css: `
+         css: `${details}
          border:2px solid red;
-         backface-visibility: visible;
-         font-size:20px;
-         text-align:center;
-         line-height:9;
          color:#900;
             `,
-         body: "B-FRONT",
+         body: "BACK-FRONT",
       },
    };
 
    return (
       <div style={{ padding: 300 }}>
          <Obj
-            width={100}
-            height={210}
-            depth={210}
+            width={150}
+            height={150}
+            depth={150}
             perspectiveOrigin='50% 50%'
             perspective={900}
             zIndex={10}
