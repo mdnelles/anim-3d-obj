@@ -5,15 +5,15 @@ import Obj from "./components/Obj";
 function App() {
    const faceprops = {
       front: true,
-      back: true,
-      left: true,
-      right: true,
-      top: true,
-      top_rear: true,
-      top_front: true,
-      bottom_rear: true,
-      bottom_front: true,
-      bottom: true,
+      back: false,
+      left: false,
+      right: false,
+      top: false,
+      top_rear: false,
+      top_front: false,
+      bottom_rear: false,
+      bottom_front: false,
+      bottom: false,
    };
 
    const global: object = {
@@ -34,23 +34,23 @@ function App() {
       degreesLow: 15, // degrees if spin
       delay: 0,
       direction: "normal", //normal altenating reverse
-      duration: 8,
+      duration: 5,
       fillMode: "forward", // node forward backward both
-      iterationCount: "infinite",
-      name: "Y360",
+      iterationCount: 1,
+      name: "swingDecay",
       timing: "ease-in-out", // linear ease ease-in-out
    };
    const anim2: object = {
       border: "",
-      degreesHi: 15, // degrees if spin
-      degreesLow: -15, // degrees if spin
+      degreesHi: 15,
+      degreesLow: -15,
       delay: 0,
-      direction: "normal", //normal altenating reverse
-      duration: 18,
-      fillMode: "forward", // node forward backward both
+      direction: "normal",
+      duration: 38,
+      fillMode: "forward",
       iterationCount: "infinite",
-      name: "X360",
-      timing: "ease-in-out", // linear ease ease-in-out
+      name: "",
+      timing: "ease-in-out",
    };
 
    const details = `backface-visibility: visible;
@@ -61,57 +61,10 @@ function App() {
 
    const custom: object = {
       // face individual styles (over rides global)
-      bottom: {
-         css: ``,
-         body: "BOTTOM",
-      },
+
       front: {
          css: ``,
          body: "FRONT",
-      },
-      back: {
-         css: ``,
-         body: "BACK",
-      },
-      top_rear: {
-         css: `${details}
-         border:2px solid pink;
-         color:pink;
-            `,
-         body: "TOP-REAR",
-      },
-      top_front: {
-         css: `${details}
-         border:2px solid #00F;
-         color:#00F;
-            `,
-         body: "TOP-FRONT",
-      },
-      top: {
-         css: ``,
-         body: "TOP",
-      },
-      left: {
-         css: ``,
-         body: "LEFT",
-      },
-      right: {
-         css: ``,
-         body: "RIGHT",
-      },
-      bottom_rear: {
-         css: `${details}
-         border:2px solid #090;
-         color: #090;
-            `,
-         body: "BACK-REAR",
-      },
-      bottom_front: {
-         css: `${details}
-         border:2px solid red;
-         color:#900;
-            `,
-         body: "BACK-FRONT",
       },
    };
 
@@ -120,7 +73,7 @@ function App() {
          <Obj
             width={150}
             height={150}
-            depth={150}
+            depth={1}
             perspectiveOrigin='50% 50%'
             perspective={900}
             zIndex={10}

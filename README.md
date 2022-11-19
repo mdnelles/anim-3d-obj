@@ -58,6 +58,8 @@ const anim1: object = {
 -  pulseSM: pulse object Small
 -  pulseMD: pulse object Medium
 -  pulseLG: pulse object Large
+-  swingDecay: Swin decays like an abandoned swing
+-  swing: swing back and forth with no decay
 -  noAnim: no animation place holder
 
 <>
