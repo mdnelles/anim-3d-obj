@@ -1,5 +1,4 @@
-//import { Cuboid,Card } from "anim-3d-obj";
-
+import React from "react";
 import Obj from "./components/Obj";
 import { AnimSpecsType } from "./components/styles/Anim";
 import { FaceType, GlobalType } from "./components/types";
@@ -16,7 +15,7 @@ function App() {
    const global: GlobalType = {
       body: "GLOBAL",
    };
-   const anim1: AnimSpecsType = {
+   const anim1 = {
       border: "",
       degreesHi: -15, // degrees if spin
       degreesLow: 15, // degrees if spin
@@ -28,7 +27,7 @@ function App() {
       name: "X360",
       timing: "ease-in-out", // linear ease ease-in-out
    };
-   const anim2: AnimSpecsType = {
+   const anim2 = {
       border: "",
       degreesHi: 15,
       degreesLow: -15,
@@ -51,26 +50,6 @@ function App() {
       {
          name: "right",
          body: "RIGHT",
-         css: exampleCss,
-      },
-      {
-         name: "top",
-         body: "TOP",
-         css: exampleCss,
-      },
-      {
-         name: "front",
-         body: "FRONT",
-         css: exampleCss,
-      },
-      {
-         name: "left",
-         body: "LEFT",
-         css: exampleCss,
-      },
-      {
-         name: "bottom",
-         body: "BOTTOM",
          css: exampleCss,
       },
    ];
