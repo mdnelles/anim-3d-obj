@@ -17,6 +17,7 @@ function App() {
    };
    const anim1 = {
       border: "",
+      animationPlayState: "paused", //paused|running|initial|inherit;
       degreesHi: -15, // degrees if spin
       degreesLow: 15, // degrees if spin
       delay: 0,
@@ -28,6 +29,7 @@ function App() {
       timing: "ease-in-out", // linear ease ease-in-out
    };
    const anim2 = {
+      animationPlayState: "running", //paused|running|initial|inherit;
       border: "",
       degreesHi: 15,
       degreesLow: -15,
