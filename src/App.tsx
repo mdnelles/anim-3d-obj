@@ -49,8 +49,6 @@ function App() {
       },
       {
          name: "right",
-         body: "RIGHT",
-         css: exampleCss,
       },
    ];
    const objProps = {
