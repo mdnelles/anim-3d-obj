@@ -1,15 +1,5 @@
-import React from "react";
 import styled from "styled-components";
-import { FaceType } from "./types";
-
-interface FaceProps {
-   children?: any;
-   depth?: number | any;
-   face: FaceType;
-   global?: any;
-   height?: number | string;
-   width?: number | string;
-}
+import { FaceProps } from "./types";
 
 export default function Face(props: FaceProps): JSX.Element {
    let display = true;
@@ -47,16 +37,13 @@ export default function Face(props: FaceProps): JSX.Element {
    } else if (face.name === "top_rear") {
       height = +depth;
       if (!!depth) tranz = +depth / 2;
-      let offset = depth / 2;
-      //translate3d(tx, ty, tz)
       transform = `transform: rotateX(90deg) translateZ(${tranz}px) translateY(-${
          tranz * 2
       }px)  `;
    } else if (face.name === "top_front") {
       height = +depth;
       if (!!depth) tranz = +depth / 2;
-      let offset = depth / 2;
-      //translate3d(tx, ty, tz)
+
       transform = `transform: rotateX(90deg) translateZ(${tranz}px) translateY(${
          tranz * 2
       }px)  `;

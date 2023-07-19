@@ -25,3 +25,18 @@ export interface GlobalType {
    css?: string;
    body?: string;
 }
+
+export interface FaceProps {
+   children?: any;
+   depth?: number | any;
+   face: FaceType;
+   global?: any;
+   height?: number | string;
+   width?: number | string;
+}
+
+export interface SpecsProps {
+   width: number;
+   height: number;
+   transform: string;
+}

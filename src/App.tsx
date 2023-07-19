@@ -1,72 +1,107 @@
-import React from "react";
 import Obj from "./components/Obj";
-import { AnimSpecsType } from "./components/styles/Anim";
-import { FaceType, GlobalType } from "./components/types";
 
 function App() {
    // face individual styles (over rides global)
-   const exampleCss = `border: 2px solid #900;
-   color:#900;
-   backface-visibility: visible;
-   background:rgba(220,22,22,.3);
-   text-align:center;
-   line-height:5;
-   font-family: Arial;`;
-   const global: GlobalType = {
-      body: "GLOBAL",
+   const global = {
+      css: 'border: 1px solid #00f; color:#00f; backface-visibility: visible; text-align:center; line-height:10; font-family: "Arial, Helvetica, sans-serif;"',
+      body: "DEFAULT",
    };
    const anim1 = {
       border: "",
-      animationPlayState: "paused", //paused|running|initial|inherit;
-      degreesHi: -15, // degrees if spin
-      degreesLow: 15, // degrees if spin
+      degreesHi: -15,
+      degreesLow: 15,
       delay: 0,
-      direction: "normal", //normal altenating reverse
-      duration: 5,
-      fillMode: "forward", // node forward backward both
+      direction: "normal",
+      duration: 15,
+      fillMode: "forwards",
       iterationCount: "infinite",
-      name: "X360",
-      timing: "ease-in-out", // linear ease ease-in-out
+      name: "Y360",
+      animationPlayState: "running",
+      timing: "linear",
    };
    const anim2 = {
-      animationPlayState: "running", //paused|running|initial|inherit;
       border: "",
       degreesHi: 15,
       degreesLow: -15,
       delay: 0,
       direction: "normal",
-      duration: 18,
-      fillMode: "forward",
+      duration: 8,
+      fillMode: "forwards",
+      animationPlayState: "running",
       iterationCount: "infinite",
-      name: "Y360",
+      name: "X360",
       timing: "ease-in-out",
    };
 
    // face individual styles (over rides global)
-   const faces: FaceType[] = [
+   const faces = [
+      {
+         name: "front",
+         css: "border: 1px solid #F00; color:#F00; text-align:center; line-height:10;",
+         body: "FRONT",
+      },
       {
          name: "back",
-         body: "BACK",
-         css: exampleCss,
+         css: "border: 1px solid #00f; color:#00f; text-align:center; line-height:10;",
+         body: "Back",
+      },
+      {
+         name: "left",
+         css: "border: 1px solid #00F; color:#00F; text-align:center; line-height:10;",
+         body: "Left",
       },
       {
          name: "right",
+         css: "border: 1px solid #F00; color:#F00; text-align:center; line-height:10;",
+         body: "Right",
+      },
+      {
+         name: "top",
+         css: "border: 1px solid #eb9b34; color:#eb9b34; text-align:center; line-height:10;",
+         body: "Top",
+      },
+      {
+         name: "top_rear",
+         css: "border: 1px solid #118f7c; color:#118f7c; text-align:center; line-height:10;",
+         body: "Top Rear",
+      },
+      {
+         name: "top_front",
+         css: "border: 1px solid #a31492; color:#a31492; text-align:center; line-height:10;",
+         body: "Top Front",
+      },
+      {
+         name: "bottom_rear",
+         css: "border: 1px solid #97a314; color:#97a314; text-align:center; line-height:10;",
+         body: "Bottom Rear",
+      },
+      {
+         name: "bottom_front",
+         css: "border: 1px solid #453721; color:#453721; text-align:center; line-height:10;",
+         body: "Bottom Front",
+      },
+      {
+         name: "bottom",
+         css: "border: 1px solid #212f45; color:#212f45; text-align:center; line-height:10;",
+         body: "Bottom",
       },
    ];
+
    const objProps = {
-      width: 150,
-      height: 150,
+      width: 160,
+      height: 160,
       depth: 150,
       perspectiveOrigin: "50% 50%",
-      perspective: 900,
+      perspective: 500,
       faces,
       anim1,
       anim2,
       global,
       showCenterDiv: false,
    };
+
    return (
-      <div style={{ padding: 300 }}>
+      <div style={{ padding: 150 }}>
          <Obj {...objProps} />
          <div style={{ padding: 5 }} />
       </div>

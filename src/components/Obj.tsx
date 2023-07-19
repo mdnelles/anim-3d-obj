@@ -1,11 +1,10 @@
-import React from "react";
 import { ObjWrapper } from "./styles/Global";
 import { AnimWrap } from "./styles/AnimWrap";
 import { SceneStyle } from "./styles/Scene";
 import Face from "./Face";
 import { FaceType, ObjProps } from "./types";
 
-export default function (props: ObjProps): JSX.Element {
+export default function Obj(props: ObjProps): JSX.Element {
    let {
       anim1,
       anim2,
