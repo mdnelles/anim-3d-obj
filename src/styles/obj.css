@@ -1,0 +1,39 @@
+.anim3d-stage {
+   position: relative;
+   width: max-content;
+   height: max-content;
+   perspective: 600px;
+   perspective-origin: 50% 50%;
+}
+
+.anim3d-wrapper {
+   position: relative;
+   transform-style: preserve-3d;
+   width: var(--obj-w);
+   height: var(--obj-h);
+}
+
+.anim3d-center {
+   position: absolute;
+   left: 50%;
+   top: 50%;
+   width: 2px;
+   height: 2px;
+   background: #f00;
+   transform: translate(-50%, -50%);
+   z-index: 10;
+}
+
+.anim3d-face {
+   position: absolute;
+   left: 50%;
+   top: 50%;
+   width: var(--obj-w);
+   height: var(--obj-h);
+   transform-style: preserve-3d;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   backface-visibility: visible;
+   box-sizing: border-box;
+}
