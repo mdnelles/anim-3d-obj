@@ -54,70 +54,52 @@ function faceTransform3D(
 /* ------------------------------------------------------------------ */
 /*  Face transform — flat (unfolded) positions                         */
 /*                                                                     */
-/*  Layout order:  … | left | front | right | back | …                 */
-/*  Centered on the midpoint of the full row.                          */
+/*  Flat order:  front | right | back | left                           */
+/*  Centred on the midpoint of the full row.                           */
 /* ------------------------------------------------------------------ */
 
-/** Ordered face names for the flat row (left-to-right) */
-const FLAT_ORDER: FaceName[] = ["left", "front", "right", "back"];
-
-/**
- * Returns the flat-layout transform for a face.
- *
- * Side faces (left, right) have a rendered width of `d` (depth).
- * Front/back faces have a rendered width of `w`.
- * Row order: left(d) | front(w) | right(d) | back(w)
- * Total row width = 2d + 2w.  We centre the row on 0.
- */
 function faceTransformFlat(
    name: string,
    w: number,
-   _h: number,
+   h: number,
    d: number
 ): string {
-   // Total row width
-   const total = 2 * d + 2 * w;
-   const halfTotal = total / 2;
+   // Row layout (left to right): front(w) | right(d) | back(w) | left(d)
+   // Total width = 2w + 2d.  Centre of row at (w + d).
+   const total = 2 * w + 2 * d;
+   const half = total / 2;
 
-   // Cumulative left-edge x positions (relative to row start = 0)
-   // left  : 0          width d
-   // front : d          width w
-   // right : d + w      width d
-   // back  : d + w + d  width w
-   let cx: number; // centre-x of this face in the row
+   let cx: number;
 
    switch (name as FaceName) {
-      case "left":
-         cx = d / 2;
-         break;
       case "front":
-         cx = d + w / 2;
+         cx = w / 2;
          break;
       case "right":
-         cx = d + w + d / 2;
+         cx = w + d / 2;
          break;
       case "back":
-         cx = d + w + d + w / 2;
+         cx = w + d + w / 2;
+         break;
+      case "left":
+         cx = w + d + w + d / 2;
          break;
       case "top":
       case "top_front":
       case "top_rear":
-         // Top faces slide upward out of the way
-         cx = d + w / 2;
-         return `translate(-50%, -50%) translateX(${cx - halfTotal}px) translateY(-${_h}px)`;
+         cx = w / 2;
+         return `translate(-50%, -50%) translateX(${cx - half}px) translateY(-${h}px)`;
       case "bottom":
       case "bottom_front":
       case "bottom_rear":
-         cx = d + w / 2;
-         return `translate(-50%, -50%) translateX(${cx - halfTotal}px) translateY(${_h}px)`;
+         cx = w / 2;
+         return `translate(-50%, -50%) translateX(${cx - half}px) translateY(${h}px)`;
       default:
-         cx = d + w / 2;
+         cx = w / 2;
          break;
    }
 
-   // Shift so the row is centred on x=0
-   const offsetX = cx - halfTotal;
-   return `translate(-50%, -50%) translateX(${offsetX}px)`;
+   return `translate(-50%, -50%) translateX(${cx - half}px)`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -165,6 +147,38 @@ function faceDimensions(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Build appearance style for a face (colours, borders, etc.)         */
+/*  Does NOT include position / transform / size.                      */
+/* ------------------------------------------------------------------ */
+
+function faceAppearance(
+   face: FaceDef,
+   globalDef?: GlobalDef
+): {
+   style: React.CSSProperties;
+   className: string;
+   body: React.ReactNode;
+} {
+   const globalStyle = parseCssText(globalDef?.css);
+   const faceInlineStyle = parseCssText(face.css);
+
+   const style: React.CSSProperties = {
+      ...globalStyle,
+      ...(globalDef?.style ?? {}),
+      ...faceInlineStyle,
+      ...(face.style ?? {}),
+   };
+
+   const className = ["anim3d-face", face.className]
+      .filter(Boolean)
+      .join(" ");
+
+   const body = face.body ?? globalDef?.body ?? null;
+
+   return { style, className, body };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Default 6-sided cube when no faces are provided                    */
 /* ------------------------------------------------------------------ */
 
@@ -175,6 +189,23 @@ const DEFAULT_FACE_NAMES: FaceName[] = [
    "right",
    "top",
    "bottom",
+];
+
+/* ------------------------------------------------------------------ */
+/*  Stagger order for oneAtATime (standard mode)                       */
+/* ------------------------------------------------------------------ */
+
+const STAGGER_ORDER: string[] = [
+   "front",
+   "right",
+   "back",
+   "left",
+   "top",
+   "bottom",
+   "top_front",
+   "top_rear",
+   "bottom_front",
+   "bottom_rear",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -195,12 +226,17 @@ export const Obj: React.FC<ObjProps> = React.memo(
       showCenterDiv = false,
       flat = false,
       transitionDuration = 1,
+      oneAtATime = false,
+      remainJoined = false,
       className,
       style,
    }) => {
-      const w = typeof width === "number" ? width : parseFloat(width);
-      const h = typeof height === "number" ? height : parseFloat(height);
-      const d = typeof depth === "number" ? depth : parseFloat(depth);
+      const w =
+         typeof width === "number" ? width : parseFloat(String(width));
+      const h =
+         typeof height === "number" ? height : parseFloat(String(height));
+      const d =
+         typeof depth === "number" ? depth : parseFloat(String(depth));
 
       // Resolve animation shorthands
       const animation1 = toAnimationShorthand(anim1) ?? undefined;
@@ -212,47 +248,253 @@ export const Obj: React.FC<ObjProps> = React.memo(
             ? faces
             : DEFAULT_FACE_NAMES.map((name) => ({ name }));
 
-      const transitionCss = `transform ${transitionDuration}s ease-in-out`;
+      const transitionCss = (delay = 0) =>
+         `transform ${transitionDuration}s ease-in-out ${delay}s`;
 
-      // Merge global defaults into each face
-      const renderFace = (face: FaceDef, i: number) => {
-         const dims = faceDimensions(face.name, w, h, d);
-         const transform = flat
-            ? faceTransformFlat(face.name, w, h, d)
-            : faceTransform3D(face.name, w, h, d);
+      /* ============================================================ */
+      /*  Standard rendering (no remainJoined)                         */
+      /* ============================================================ */
 
-         const globalStyle = parseCssText(globalDef?.css);
-         const faceInlineStyle = parseCssText(face.css);
+      const renderStandard = () =>
+         faceList.map((face, i) => {
+            const dims = faceDimensions(face.name, w, h, d);
+            const transform = flat
+               ? faceTransformFlat(face.name, w, h, d)
+               : faceTransform3D(face.name, w, h, d);
 
-         const mergedStyle: React.CSSProperties = {
-            ...globalStyle,
-            ...(globalDef?.style ?? {}),
-            ...faceInlineStyle,
-            ...(face.style ?? {}),
-            width: dims.width,
-            height: dims.height,
-            transform,
-            transition: transitionCss,
+            const {
+               style: fStyle,
+               className: fCls,
+               body,
+            } = faceAppearance(face, globalDef);
+
+            const idx = STAGGER_ORDER.indexOf(face.name);
+            const delay = oneAtATime
+               ? (idx >= 0 ? idx : i) * transitionDuration
+               : 0;
+
+            return (
+               <div
+                  key={face.name + "-" + i}
+                  className={fCls}
+                  style={{
+                     ...fStyle,
+                     width: dims.width,
+                     height: dims.height,
+                     transform,
+                     transition: transitionCss(delay),
+                  }}
+               >
+                  {body}
+               </div>
+            );
+         });
+
+      /* ============================================================ */
+      /*  Joined rendering — nested hinge structure                    */
+      /*                                                               */
+      /*  Chain: front → right → back  (hinged at shared edges)        */
+      /*  Left is independent (the break‑point).                       */
+      /*                                                               */
+      /*  Flat order: front | right | back | left (left on far right)  */
+      /* ============================================================ */
+
+      const renderJoined = () => {
+         const findFace = (n: string) =>
+            faceList.find((f) => f.name === n);
+
+         const frontFace = findFace("front");
+         const rightFace = findFace("right");
+         const backFace = findFace("back");
+         const leftFace = findFace("left");
+
+         const sideNames = new Set([
+            "front",
+            "right",
+            "back",
+            "left",
+         ]);
+         const otherFaces = faceList.filter(
+            (f) => !sideNames.has(f.name)
+         );
+
+         const step = oneAtATime ? transitionDuration : 0;
+
+         /* Helper: render a single face element with merged styles */
+         const renderFaceEl = (
+            face: FaceDef | undefined,
+            dims: { width: number; height: number },
+            extra: React.CSSProperties,
+            key: string
+         ) => {
+            if (!face) return null;
+            const {
+               style: fStyle,
+               className: fCls,
+               body,
+            } = faceAppearance(face, globalDef);
+            return (
+               <div
+                  key={key}
+                  className={fCls}
+                  style={{
+                     ...fStyle,
+                     width: dims.width,
+                     height: dims.height,
+                     display: "flex",
+                     alignItems: "center",
+                     justifyContent: "center",
+                     boxSizing: "border-box",
+                     ...extra,
+                  }}
+               >
+                  {body}
+               </div>
+            );
          };
 
-         const body = face.body ?? globalDef?.body ?? null;
-         const faceClassName = [
-            "anim3d-face",
-            face.className,
-         ]
-            .filter(Boolean)
-            .join(" ");
-
          return (
-            <div
-               key={face.name + "-" + i}
-               className={faceClassName}
-               style={mergedStyle}
-            >
-               {body}
-            </div>
+            <>
+               {/* ---- Front face (anchor) ---- */}
+               {renderFaceEl(
+                  frontFace,
+                  { width: w, height: h },
+                  {
+                     position: "absolute",
+                     left: "50%",
+                     top: "50%",
+                     transform: flat
+                        ? "translate(-50%, -50%)"
+                        : `translate(-50%, -50%) translateZ(${d / 2}px)`,
+                     transition: transitionCss(0),
+                  },
+                  "front-j"
+               )}
+
+               {/* ---- Right hinge (pivots at front's right edge) ---- */}
+               <div
+                  style={{
+                     position: "absolute",
+                     left: `calc(50% + ${w / 2}px)`,
+                     top: "50%",
+                     width: 0,
+                     height: 0,
+                     transformOrigin: "0 0",
+                     transformStyle: "preserve-3d",
+                     transform: flat
+                        ? "none"
+                        : `translateZ(${d / 2}px) rotateY(90deg)`,
+                     transition: transitionCss(step),
+                  }}
+               >
+                  {/* Right face */}
+                  {renderFaceEl(
+                     rightFace,
+                     { width: d, height: h },
+                     {
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        transform: "translateY(-50%)",
+                     },
+                     "right-j"
+                  )}
+
+                  {/* ---- Back hinge (pivots at right's far edge) ---- */}
+                  <div
+                     style={{
+                        position: "absolute",
+                        left: d,
+                        top: 0,
+                        width: 0,
+                        height: 0,
+                        transformOrigin: "0 0",
+                        transformStyle: "preserve-3d",
+                        transform: flat
+                           ? "none"
+                           : "rotateY(90deg)",
+                        transition: transitionCss(step * 2),
+                     }}
+                  >
+                     {/* Back face */}
+                     {renderFaceEl(
+                        backFace,
+                        { width: w, height: h },
+                        {
+                           position: "absolute",
+                           left: 0,
+                           top: 0,
+                           transform: "translateY(-50%)",
+                        },
+                        "back-j"
+                     )}
+
+                     {/* ---- Left hinge (pivots at back's far edge) ---- */}
+                     <div
+                        style={{
+                           position: "absolute",
+                           left: w,
+                           top: 0,
+                           width: 0,
+                           height: 0,
+                           transformOrigin: "0 0",
+                           transformStyle: "preserve-3d",
+                           transform: flat
+                              ? "none"
+                              : "rotateY(90deg)",
+                           transition: transitionCss(step * 3),
+                        }}
+                     >
+                        {/* Left face */}
+                        {renderFaceEl(
+                           leftFace,
+                           { width: d, height: h },
+                           {
+                              position: "absolute",
+                              left: 0,
+                              top: 0,
+                              transform: "translateY(-50%)",
+                           },
+                           "left-j"
+                        )}
+                     </div>
+                  </div>
+               </div>
+
+               {/* ---- Non-side faces (top, bottom, etc.) ---- */}
+               {otherFaces.map((face, i) => {
+                  const dims = faceDimensions(face.name, w, h, d);
+                  const xform = flat
+                     ? faceTransformFlat(face.name, w, h, d)
+                     : faceTransform3D(face.name, w, h, d);
+                  const {
+                     style: fStyle,
+                     className: fCls,
+                     body,
+                  } = faceAppearance(face, globalDef);
+                  return (
+                     <div
+                        key={face.name + "-o-" + i}
+                        className={fCls}
+                        style={{
+                           ...fStyle,
+                           width: dims.width,
+                           height: dims.height,
+                           transform: xform,
+                           transition: transitionCss(0),
+                        }}
+                     >
+                        {body}
+                     </div>
+                  );
+               })}
+            </>
          );
       };
+
+      /* ============================================================ */
+      /*  Render tree                                                  */
+      /* ============================================================ */
 
       const cssVars = {
          "--obj-w": w + "px",
@@ -262,9 +504,11 @@ export const Obj: React.FC<ObjProps> = React.memo(
 
       return (
          <div
-            className={["anim3d-stage", className].filter(Boolean).join(" ")}
+            className={["anim3d-stage", className]
+               .filter(Boolean)
+               .join(" ")}
             style={{
-               perspective: flat ? "none" : perspective,
+               perspective,
                perspectiveOrigin,
                ...cssVars,
                ...style,
@@ -280,7 +524,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                   ...cssVars,
                   animation: flat ? "none" : animation1,
                   transformStyle: "preserve-3d",
-                  transition: transitionCss,
+                  transition: transitionCss(),
                }}
             >
                {/* Inner animation wrapper (anim2) */}
@@ -290,11 +534,15 @@ export const Obj: React.FC<ObjProps> = React.memo(
                      ...cssVars,
                      animation: flat ? "none" : animation2,
                      transformStyle: "preserve-3d",
-                     transition: transitionCss,
+                     transition: transitionCss(),
                   }}
                >
-                  {showCenterDiv && <div className="anim3d-center" />}
-                  {faceList.map(renderFace)}
+                  {showCenterDiv && (
+                     <div className="anim3d-center" />
+                  )}
+                  {remainJoined
+                     ? renderJoined()
+                     : renderStandard()}
                </div>
             </div>
          </div>

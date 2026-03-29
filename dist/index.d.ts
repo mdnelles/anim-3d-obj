@@ -46,6 +46,11 @@ type ObjProps = {
     flat?: boolean;
     /** Seconds for the fold/unfold transition (default 1) */
     transitionDuration?: number;
+    /** When true, faces unfold one at a time with staggered delays */
+    oneAtATime?: boolean;
+    /** When true, connected edges stay joined during unfold (front→right→back chain).
+     *  The left–front edge is the break point. */
+    remainJoined?: boolean;
     className?: string;
     style?: CSSProperties;
 };

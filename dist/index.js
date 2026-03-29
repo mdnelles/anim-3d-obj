@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { jsx, jsxs } from 'react/jsx-runtime';
+import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 
 // src/components/Obj.tsx
 
@@ -96,39 +96,38 @@ function faceTransform3D(name, w, h, d) {
       return `translate(-50%, -50%) translateZ(${hd}px)`;
   }
 }
-function faceTransformFlat(name, w, _h, d) {
-  const total = 2 * d + 2 * w;
-  const halfTotal = total / 2;
+function faceTransformFlat(name, w, h, d) {
+  const total = 2 * w + 2 * d;
+  const half = total / 2;
   let cx;
   switch (name) {
-    case "left":
-      cx = d / 2;
-      break;
     case "front":
-      cx = d + w / 2;
+      cx = w / 2;
       break;
     case "right":
-      cx = d + w + d / 2;
+      cx = w + d / 2;
       break;
     case "back":
-      cx = d + w + d + w / 2;
+      cx = w + d + w / 2;
+      break;
+    case "left":
+      cx = w + d + w + d / 2;
       break;
     case "top":
     case "top_front":
     case "top_rear":
-      cx = d + w / 2;
-      return `translate(-50%, -50%) translateX(${cx - halfTotal}px) translateY(-${_h}px)`;
+      cx = w / 2;
+      return `translate(-50%, -50%) translateX(${cx - half}px) translateY(-${h}px)`;
     case "bottom":
     case "bottom_front":
     case "bottom_rear":
-      cx = d + w / 2;
-      return `translate(-50%, -50%) translateX(${cx - halfTotal}px) translateY(${_h}px)`;
+      cx = w / 2;
+      return `translate(-50%, -50%) translateX(${cx - half}px) translateY(${h}px)`;
     default:
-      cx = d + w / 2;
+      cx = w / 2;
       break;
   }
-  const offsetX = cx - halfTotal;
-  return `translate(-50%, -50%) translateX(${offsetX}px)`;
+  return `translate(-50%, -50%) translateX(${cx - half}px)`;
 }
 function parseCssText(css) {
   if (!css) return {};
@@ -157,6 +156,19 @@ function faceDimensions(name, w, h, d) {
       return { width: w, height: h };
   }
 }
+function faceAppearance(face, globalDef) {
+  const globalStyle = parseCssText(globalDef?.css);
+  const faceInlineStyle = parseCssText(face.css);
+  const style = {
+    ...globalStyle,
+    ...globalDef?.style ?? {},
+    ...faceInlineStyle,
+    ...face.style ?? {}
+  };
+  const className = ["anim3d-face", face.className].filter(Boolean).join(" ");
+  const body = face.body ?? globalDef?.body ?? null;
+  return { style, className, body };
+}
 var DEFAULT_FACE_NAMES = [
   "front",
   "back",
@@ -164,6 +176,18 @@ var DEFAULT_FACE_NAMES = [
   "right",
   "top",
   "bottom"
+];
+var STAGGER_ORDER = [
+  "front",
+  "right",
+  "back",
+  "left",
+  "top",
+  "bottom",
+  "top_front",
+  "top_rear",
+  "bottom_front",
+  "bottom_rear"
 ];
 var Obj = React.memo(
   ({
@@ -179,45 +203,209 @@ var Obj = React.memo(
     showCenterDiv = false,
     flat = false,
     transitionDuration = 1,
+    oneAtATime = false,
+    remainJoined = false,
     className,
     style
   }) => {
-    const w = typeof width === "number" ? width : parseFloat(width);
-    const h = typeof height === "number" ? height : parseFloat(height);
-    const d = typeof depth === "number" ? depth : parseFloat(depth);
+    const w = typeof width === "number" ? width : parseFloat(String(width));
+    const h = typeof height === "number" ? height : parseFloat(String(height));
+    const d = typeof depth === "number" ? depth : parseFloat(String(depth));
     const animation1 = toAnimationShorthand(anim1) ?? void 0;
     const animation2 = toAnimationShorthand(anim2) ?? void 0;
     const faceList = faces && faces.length > 0 ? faces : DEFAULT_FACE_NAMES.map((name) => ({ name }));
-    const transitionCss = `transform ${transitionDuration}s ease-in-out`;
-    const renderFace = (face, i) => {
+    const transitionCss = (delay = 0) => `transform ${transitionDuration}s ease-in-out ${delay}s`;
+    const renderStandard = () => faceList.map((face, i) => {
       const dims = faceDimensions(face.name, w, h, d);
       const transform = flat ? faceTransformFlat(face.name, w, h, d) : faceTransform3D(face.name, w, h, d);
-      const globalStyle = parseCssText(globalDef?.css);
-      const faceInlineStyle = parseCssText(face.css);
-      const mergedStyle = {
-        ...globalStyle,
-        ...globalDef?.style ?? {},
-        ...faceInlineStyle,
-        ...face.style ?? {},
-        width: dims.width,
-        height: dims.height,
-        transform,
-        transition: transitionCss
-      };
-      const body = face.body ?? globalDef?.body ?? null;
-      const faceClassName = [
-        "anim3d-face",
-        face.className
-      ].filter(Boolean).join(" ");
+      const {
+        style: fStyle,
+        className: fCls,
+        body
+      } = faceAppearance(face, globalDef);
+      const idx = STAGGER_ORDER.indexOf(face.name);
+      const delay = oneAtATime ? (idx >= 0 ? idx : i) * transitionDuration : 0;
       return /* @__PURE__ */ jsx(
         "div",
         {
-          className: faceClassName,
-          style: mergedStyle,
+          className: fCls,
+          style: {
+            ...fStyle,
+            width: dims.width,
+            height: dims.height,
+            transform,
+            transition: transitionCss(delay)
+          },
           children: body
         },
         face.name + "-" + i
       );
+    });
+    const renderJoined = () => {
+      const findFace = (n) => faceList.find((f) => f.name === n);
+      const frontFace = findFace("front");
+      const rightFace = findFace("right");
+      const backFace = findFace("back");
+      const leftFace = findFace("left");
+      const sideNames = /* @__PURE__ */ new Set([
+        "front",
+        "right",
+        "back",
+        "left"
+      ]);
+      const otherFaces = faceList.filter(
+        (f) => !sideNames.has(f.name)
+      );
+      const step = oneAtATime ? transitionDuration : 0;
+      const renderFaceEl = (face, dims, extra, key) => {
+        if (!face) return null;
+        const {
+          style: fStyle,
+          className: fCls,
+          body
+        } = faceAppearance(face, globalDef);
+        return /* @__PURE__ */ jsx(
+          "div",
+          {
+            className: fCls,
+            style: {
+              ...fStyle,
+              width: dims.width,
+              height: dims.height,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxSizing: "border-box",
+              ...extra
+            },
+            children: body
+          },
+          key
+        );
+      };
+      return /* @__PURE__ */ jsxs(Fragment, { children: [
+        renderFaceEl(
+          frontFace,
+          { width: w, height: h },
+          {
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: flat ? "translate(-50%, -50%)" : `translate(-50%, -50%) translateZ(${d / 2}px)`,
+            transition: transitionCss(0)
+          },
+          "front-j"
+        ),
+        /* @__PURE__ */ jsxs(
+          "div",
+          {
+            style: {
+              position: "absolute",
+              left: `calc(50% + ${w / 2}px)`,
+              top: "50%",
+              width: 0,
+              height: 0,
+              transformOrigin: "0 0",
+              transformStyle: "preserve-3d",
+              transform: flat ? "none" : `translateZ(${d / 2}px) rotateY(90deg)`,
+              transition: transitionCss(step)
+            },
+            children: [
+              renderFaceEl(
+                rightFace,
+                { width: d, height: h },
+                {
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  transform: "translateY(-50%)"
+                },
+                "right-j"
+              ),
+              /* @__PURE__ */ jsxs(
+                "div",
+                {
+                  style: {
+                    position: "absolute",
+                    left: d,
+                    top: 0,
+                    width: 0,
+                    height: 0,
+                    transformOrigin: "0 0",
+                    transformStyle: "preserve-3d",
+                    transform: flat ? "none" : "rotateY(90deg)",
+                    transition: transitionCss(step * 2)
+                  },
+                  children: [
+                    renderFaceEl(
+                      backFace,
+                      { width: w, height: h },
+                      {
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        transform: "translateY(-50%)"
+                      },
+                      "back-j"
+                    ),
+                    /* @__PURE__ */ jsx(
+                      "div",
+                      {
+                        style: {
+                          position: "absolute",
+                          left: w,
+                          top: 0,
+                          width: 0,
+                          height: 0,
+                          transformOrigin: "0 0",
+                          transformStyle: "preserve-3d",
+                          transform: flat ? "none" : "rotateY(90deg)",
+                          transition: transitionCss(step * 3)
+                        },
+                        children: renderFaceEl(
+                          leftFace,
+                          { width: d, height: h },
+                          {
+                            position: "absolute",
+                            left: 0,
+                            top: 0,
+                            transform: "translateY(-50%)"
+                          },
+                          "left-j"
+                        )
+                      }
+                    )
+                  ]
+                }
+              )
+            ]
+          }
+        ),
+        otherFaces.map((face, i) => {
+          const dims = faceDimensions(face.name, w, h, d);
+          const xform = flat ? faceTransformFlat(face.name, w, h, d) : faceTransform3D(face.name, w, h, d);
+          const {
+            style: fStyle,
+            className: fCls,
+            body
+          } = faceAppearance(face, globalDef);
+          return /* @__PURE__ */ jsx(
+            "div",
+            {
+              className: fCls,
+              style: {
+                ...fStyle,
+                width: dims.width,
+                height: dims.height,
+                transform: xform,
+                transition: transitionCss(0)
+              },
+              children: body
+            },
+            face.name + "-o-" + i
+          );
+        })
+      ] });
     };
     const cssVars = {
       "--obj-w": w + "px",
@@ -229,7 +417,7 @@ var Obj = React.memo(
       {
         className: ["anim3d-stage", className].filter(Boolean).join(" "),
         style: {
-          perspective: flat ? "none" : perspective,
+          perspective,
           perspectiveOrigin,
           ...cssVars,
           ...style
@@ -245,7 +433,7 @@ var Obj = React.memo(
               ...cssVars,
               animation: flat ? "none" : animation1,
               transformStyle: "preserve-3d",
-              transition: transitionCss
+              transition: transitionCss()
             },
             children: /* @__PURE__ */ jsxs(
               "div",
@@ -255,11 +443,11 @@ var Obj = React.memo(
                   ...cssVars,
                   animation: flat ? "none" : animation2,
                   transformStyle: "preserve-3d",
-                  transition: transitionCss
+                  transition: transitionCss()
                 },
                 children: [
                   showCenterDiv && /* @__PURE__ */ jsx("div", { className: "anim3d-center" }),
-                  faceList.map(renderFace)
+                  remainJoined ? renderJoined() : renderStandard()
                 ]
               }
             )
