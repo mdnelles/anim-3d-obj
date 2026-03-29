@@ -1,8 +1,5 @@
 import type { AnimationConfig } from "./types";
 
-let counter = 0;
-const uid = () => (++counter).toString(36);
-
 /** Create (or reuse) a <style> tag for dynamic keyframes */
 function ensureStyleTag(): HTMLStyleElement {
    let tag = document.getElementById(
