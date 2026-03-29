@@ -74,6 +74,12 @@ export type ObjProps = {
    anim2?: AnimationConfig;
 
    showCenterDiv?: boolean;
+
+   /** When true, faces unfold from 3D cuboid into a flat side-by-side row */
+   flat?: boolean;
+   /** Seconds for the fold/unfold transition (default 1) */
+   transitionDuration?: number;
+
    className?: string;
    style?: CSSProperties;
 };

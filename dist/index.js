@@ -67,7 +67,7 @@ function toAnimationShorthand(cfg) {
   const play = cfg.animationPlayState ?? "running";
   return `${name} ${dur} ${timing} ${delay} ${iter} ${dir} ${fill} ${play}`;
 }
-function faceTransform(name, w, h, d) {
+function faceTransform3D(name, w, h, d) {
   const hw = w / 2;
   const hh = h / 2;
   const hd = d / 2;
@@ -84,7 +84,6 @@ function faceTransform(name, w, h, d) {
       return `translate(-50%, -50%) rotateX(90deg) translateZ(${hh}px)`;
     case "bottom":
       return `translate(-50%, -50%) rotateX(-90deg) translateZ(${hh}px)`;
-    // Legacy names – map to angled half-faces
     case "top_front":
       return `translate(-50%, -50%) rotateX(45deg) translateZ(${hh}px)`;
     case "top_rear":
@@ -96,6 +95,40 @@ function faceTransform(name, w, h, d) {
     default:
       return `translate(-50%, -50%) translateZ(${hd}px)`;
   }
+}
+function faceTransformFlat(name, w, _h, d) {
+  const total = 2 * d + 2 * w;
+  const halfTotal = total / 2;
+  let cx;
+  switch (name) {
+    case "left":
+      cx = d / 2;
+      break;
+    case "front":
+      cx = d + w / 2;
+      break;
+    case "right":
+      cx = d + w + d / 2;
+      break;
+    case "back":
+      cx = d + w + d + w / 2;
+      break;
+    case "top":
+    case "top_front":
+    case "top_rear":
+      cx = d + w / 2;
+      return `translate(-50%, -50%) translateX(${cx - halfTotal}px) translateY(-${_h}px)`;
+    case "bottom":
+    case "bottom_front":
+    case "bottom_rear":
+      cx = d + w / 2;
+      return `translate(-50%, -50%) translateX(${cx - halfTotal}px) translateY(${_h}px)`;
+    default:
+      cx = d + w / 2;
+      break;
+  }
+  const offsetX = cx - halfTotal;
+  return `translate(-50%, -50%) translateX(${offsetX}px)`;
 }
 function parseCssText(css) {
   if (!css) return {};
@@ -144,6 +177,8 @@ var Obj = React.memo(
     anim1,
     anim2,
     showCenterDiv = false,
+    flat = false,
+    transitionDuration = 1,
     className,
     style
   }) => {
@@ -153,9 +188,10 @@ var Obj = React.memo(
     const animation1 = toAnimationShorthand(anim1) ?? void 0;
     const animation2 = toAnimationShorthand(anim2) ?? void 0;
     const faceList = faces && faces.length > 0 ? faces : DEFAULT_FACE_NAMES.map((name) => ({ name }));
+    const transitionCss = `transform ${transitionDuration}s ease-in-out`;
     const renderFace = (face, i) => {
       const dims = faceDimensions(face.name, w, h, d);
-      const transform = faceTransform(face.name, w, h, d);
+      const transform = flat ? faceTransformFlat(face.name, w, h, d) : faceTransform3D(face.name, w, h, d);
       const globalStyle = parseCssText(globalDef?.css);
       const faceInlineStyle = parseCssText(face.css);
       const mergedStyle = {
@@ -165,7 +201,8 @@ var Obj = React.memo(
         ...face.style ?? {},
         width: dims.width,
         height: dims.height,
-        transform
+        transform,
+        transition: transitionCss
       };
       const body = face.body ?? globalDef?.body ?? null;
       const faceClassName = [
@@ -192,7 +229,7 @@ var Obj = React.memo(
       {
         className: ["anim3d-stage", className].filter(Boolean).join(" "),
         style: {
-          perspective,
+          perspective: flat ? "none" : perspective,
           perspectiveOrigin,
           ...cssVars,
           ...style
@@ -206,8 +243,9 @@ var Obj = React.memo(
             className: "anim3d-wrapper",
             style: {
               ...cssVars,
-              animation: animation1,
-              transformStyle: "preserve-3d"
+              animation: flat ? "none" : animation1,
+              transformStyle: "preserve-3d",
+              transition: transitionCss
             },
             children: /* @__PURE__ */ jsxs(
               "div",
@@ -215,8 +253,9 @@ var Obj = React.memo(
                 className: "anim3d-wrapper",
                 style: {
                   ...cssVars,
-                  animation: animation2,
-                  transformStyle: "preserve-3d"
+                  animation: flat ? "none" : animation2,
+                  transformStyle: "preserve-3d",
+                  transition: transitionCss
                 },
                 children: [
                   showCenterDiv && /* @__PURE__ */ jsx("div", { className: "anim3d-center" }),

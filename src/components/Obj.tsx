@@ -12,10 +12,10 @@ import "../styles/obj.css";
 export type { ObjProps } from "../types";
 
 /* ------------------------------------------------------------------ */
-/*  Face transform map                                                 */
+/*  Face transform — 3D cuboid positions                               */
 /* ------------------------------------------------------------------ */
 
-function faceTransform(
+function faceTransform3D(
    name: string,
    w: number,
    h: number,
@@ -38,7 +38,6 @@ function faceTransform(
          return `translate(-50%, -50%) rotateX(90deg) translateZ(${hh}px)`;
       case "bottom":
          return `translate(-50%, -50%) rotateX(-90deg) translateZ(${hh}px)`;
-      // Legacy names – map to angled half-faces
       case "top_front":
          return `translate(-50%, -50%) rotateX(45deg) translateZ(${hh}px)`;
       case "top_rear":
@@ -50,6 +49,75 @@ function faceTransform(
       default:
          return `translate(-50%, -50%) translateZ(${hd}px)`;
    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Face transform — flat (unfolded) positions                         */
+/*                                                                     */
+/*  Layout order:  … | left | front | right | back | …                 */
+/*  Centered on the midpoint of the full row.                          */
+/* ------------------------------------------------------------------ */
+
+/** Ordered face names for the flat row (left-to-right) */
+const FLAT_ORDER: FaceName[] = ["left", "front", "right", "back"];
+
+/**
+ * Returns the flat-layout transform for a face.
+ *
+ * Side faces (left, right) have a rendered width of `d` (depth).
+ * Front/back faces have a rendered width of `w`.
+ * Row order: left(d) | front(w) | right(d) | back(w)
+ * Total row width = 2d + 2w.  We centre the row on 0.
+ */
+function faceTransformFlat(
+   name: string,
+   w: number,
+   _h: number,
+   d: number
+): string {
+   // Total row width
+   const total = 2 * d + 2 * w;
+   const halfTotal = total / 2;
+
+   // Cumulative left-edge x positions (relative to row start = 0)
+   // left  : 0          width d
+   // front : d          width w
+   // right : d + w      width d
+   // back  : d + w + d  width w
+   let cx: number; // centre-x of this face in the row
+
+   switch (name as FaceName) {
+      case "left":
+         cx = d / 2;
+         break;
+      case "front":
+         cx = d + w / 2;
+         break;
+      case "right":
+         cx = d + w + d / 2;
+         break;
+      case "back":
+         cx = d + w + d + w / 2;
+         break;
+      case "top":
+      case "top_front":
+      case "top_rear":
+         // Top faces slide upward out of the way
+         cx = d + w / 2;
+         return `translate(-50%, -50%) translateX(${cx - halfTotal}px) translateY(-${_h}px)`;
+      case "bottom":
+      case "bottom_front":
+      case "bottom_rear":
+         cx = d + w / 2;
+         return `translate(-50%, -50%) translateX(${cx - halfTotal}px) translateY(${_h}px)`;
+      default:
+         cx = d + w / 2;
+         break;
+   }
+
+   // Shift so the row is centred on x=0
+   const offsetX = cx - halfTotal;
+   return `translate(-50%, -50%) translateX(${offsetX}px)`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,6 +193,8 @@ export const Obj: React.FC<ObjProps> = React.memo(
       anim1,
       anim2,
       showCenterDiv = false,
+      flat = false,
+      transitionDuration = 1,
       className,
       style,
    }) => {
@@ -142,10 +212,14 @@ export const Obj: React.FC<ObjProps> = React.memo(
             ? faces
             : DEFAULT_FACE_NAMES.map((name) => ({ name }));
 
+      const transitionCss = `transform ${transitionDuration}s ease-in-out`;
+
       // Merge global defaults into each face
       const renderFace = (face: FaceDef, i: number) => {
          const dims = faceDimensions(face.name, w, h, d);
-         const transform = faceTransform(face.name, w, h, d);
+         const transform = flat
+            ? faceTransformFlat(face.name, w, h, d)
+            : faceTransform3D(face.name, w, h, d);
 
          const globalStyle = parseCssText(globalDef?.css);
          const faceInlineStyle = parseCssText(face.css);
@@ -158,6 +232,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
             width: dims.width,
             height: dims.height,
             transform,
+            transition: transitionCss,
          };
 
          const body = face.body ?? globalDef?.body ?? null;
@@ -189,7 +264,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
          <div
             className={["anim3d-stage", className].filter(Boolean).join(" ")}
             style={{
-               perspective,
+               perspective: flat ? "none" : perspective,
                perspectiveOrigin,
                ...cssVars,
                ...style,
@@ -203,8 +278,9 @@ export const Obj: React.FC<ObjProps> = React.memo(
                className="anim3d-wrapper"
                style={{
                   ...cssVars,
-                  animation: animation1,
+                  animation: flat ? "none" : animation1,
                   transformStyle: "preserve-3d",
+                  transition: transitionCss,
                }}
             >
                {/* Inner animation wrapper (anim2) */}
@@ -212,8 +288,9 @@ export const Obj: React.FC<ObjProps> = React.memo(
                   className="anim3d-wrapper"
                   style={{
                      ...cssVars,
-                     animation: animation2,
+                     animation: flat ? "none" : animation2,
                      transformStyle: "preserve-3d",
+                     transition: transitionCss,
                   }}
                >
                   {showCenterDiv && <div className="anim3d-center" />}
