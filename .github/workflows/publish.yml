@@ -7,12 +7,18 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Skip runs triggered by the bot's own version-bump commits
+    if: "!startsWith(github.event.head_commit.message, 'chore: release v')"
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Pull latest (in case of prior version bump)
+        run: git pull --rebase origin main
 
       - uses: actions/setup-node@v4
         with:
