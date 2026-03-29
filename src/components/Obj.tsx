@@ -64,8 +64,6 @@ function faceTransformFlat(
    h: number,
    d: number
 ): string {
-   // Row layout (left to right): front(w) | right(d) | back(w) | left(d)
-   // Total width = 2w + 2d.  Centre of row at (w + d).
    const total = 2 * w + 2 * d;
    const half = total / 2;
 
@@ -179,41 +177,6 @@ function faceAppearance(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Sheen overlay — sweeps across each face as it leaves face-on       */
-/* ------------------------------------------------------------------ */
-
-/** Fraction of rotation cycle at which each face is face-on (Y-axis) */
-const Y_FACE_OFFSET: Record<string, number> = {
-   front: 0,
-   right: 0.25,
-   back: 0.5,
-   left: 0.75,
-};
-
-function sheenOverlay(
-   faceName: string,
-   animDuration: number,
-   isFlat: boolean
-): React.ReactNode {
-   if (isFlat) return null;
-   const offset = Y_FACE_OFFSET[faceName];
-   if (offset === undefined) return null; // no sheen for top/bottom etc.
-   const delay = offset * animDuration;
-
-   return (
-      <div className="anim3d-sheen">
-         <div
-            className="anim3d-sheen-bar"
-            style={{
-               "--sheen-dur": animDuration + "s",
-               "--sheen-delay": delay + "s",
-            } as React.CSSProperties}
-         />
-      </div>
-   );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Default 6-sided cube when no faces are provided                    */
 /* ------------------------------------------------------------------ */
 
@@ -263,7 +226,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
       transitionDuration = 1,
       oneAtATime = false,
       remainJoined = false,
-      sheen = false,
+      ytilt = false,
       className,
       style,
    }) => {
@@ -287,8 +250,47 @@ export const Obj: React.FC<ObjProps> = React.memo(
       const transitionCss = (delay = 0) =>
          `transform ${transitionDuration}s ease-in-out ${delay}s`;
 
-      // Duration for sheen (synced to anim1 rotation cycle)
-      const sheenDur = anim1?.duration ?? 6;
+      /* ============================================================ */
+      /*  Y-tilt — fire a one-shot rotateX(0→45→0) each time          */
+      /*  flat changes. We alternate between two identical keyframe    */
+      /*  names (a/b) so the browser re-triggers the animation.        */
+      /* ============================================================ */
+
+      const tiltCount = React.useRef(0);
+      const prevFlat = React.useRef(flat);
+      const [tiltAnim, setTiltAnim] = React.useState<
+         string | undefined
+      >(undefined);
+
+      React.useEffect(() => {
+         if (flat !== prevFlat.current) {
+            prevFlat.current = flat;
+            if (ytilt) {
+               tiltCount.current += 1;
+               const sideCount = faceList.filter((f) =>
+                  ["front", "right", "back", "left"].includes(
+                     f.name
+                  )
+               ).length;
+               const totalDur = oneAtATime
+                  ? transitionDuration * sideCount
+                  : transitionDuration;
+               const name =
+                  tiltCount.current % 2 === 0
+                     ? "anim3d-ytilt-a"
+                     : "anim3d-ytilt-b";
+               setTiltAnim(
+                  `${name} ${totalDur}s ease-in-out 1 forwards`
+               );
+               // Clear animation after it completes so it can re-trigger
+               const timer = setTimeout(
+                  () => setTiltAnim(undefined),
+                  totalDur * 1000 + 50
+               );
+               return () => clearTimeout(timer);
+            }
+         }
+      }, [flat, ytilt, transitionDuration, oneAtATime, faceList]);
 
       /* ============================================================ */
       /*  Standard rendering (no remainJoined)                         */
@@ -325,7 +327,6 @@ export const Obj: React.FC<ObjProps> = React.memo(
                   }}
                >
                   {body}
-                  {sheen && sheenOverlay(face.name, sheenDur, flat)}
                </div>
             );
          });
@@ -333,8 +334,8 @@ export const Obj: React.FC<ObjProps> = React.memo(
       /* ============================================================ */
       /*  Joined rendering — nested hinge structure                    */
       /*                                                               */
-      /*  Chain: front → right → back  (hinged at shared edges)        */
-      /*  Left is independent (the break‑point).                       */
+      /*  Chain: front → right → back → left (hinged at shared edges)  */
+      /*  The left–front edge is the break‑point.                      */
       /*                                                               */
       /*  Flat order: front | right | back | left (left on far right)  */
       /* ============================================================ */
@@ -389,8 +390,6 @@ export const Obj: React.FC<ObjProps> = React.memo(
                   }}
                >
                   {body}
-                  {sheen &&
-                     sheenOverlay(face.name, sheenDur, flat)}
                </div>
             );
          };
@@ -559,32 +558,40 @@ export const Obj: React.FC<ObjProps> = React.memo(
             role="img"
             aria-label="3D object"
          >
-            {/* Outer animation wrapper (anim1) */}
+            {/* Y-tilt wrapper — sits between stage and anim wrappers */}
             <div
-               className="anim3d-wrapper"
                style={{
-                  ...cssVars,
-                  animation: flat ? "none" : animation1,
                   transformStyle: "preserve-3d",
-                  transition: transitionCss(),
+                  animation: tiltAnim,
                }}
             >
-               {/* Inner animation wrapper (anim2) */}
+               {/* Outer animation wrapper (anim1) */}
                <div
                   className="anim3d-wrapper"
                   style={{
                      ...cssVars,
-                     animation: flat ? "none" : animation2,
+                     animation: flat ? "none" : animation1,
                      transformStyle: "preserve-3d",
                      transition: transitionCss(),
                   }}
                >
-                  {showCenterDiv && (
-                     <div className="anim3d-center" />
-                  )}
-                  {remainJoined
-                     ? renderJoined()
-                     : renderStandard()}
+                  {/* Inner animation wrapper (anim2) */}
+                  <div
+                     className="anim3d-wrapper"
+                     style={{
+                        ...cssVars,
+                        animation: flat ? "none" : animation2,
+                        transformStyle: "preserve-3d",
+                        transition: transitionCss(),
+                     }}
+                  >
+                     {showCenterDiv && (
+                        <div className="anim3d-center" />
+                     )}
+                     {remainJoined
+                        ? renderJoined()
+                        : renderStandard()}
+                  </div>
                </div>
             </div>
          </div>

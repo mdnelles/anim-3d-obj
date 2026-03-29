@@ -51,10 +51,10 @@ type ObjProps = {
     /** When true, connected edges stay joined during unfold (front→right→back chain).
      *  The left–front edge is the break point. */
     remainJoined?: boolean;
-    /** When true, a light-sheen sweeps across each face the moment it
-     *  rotates away from being face-on to the viewer.
-     *  Requires a Y-axis rotation animation (anim1) to function. */
-    sheen?: boolean;
+    /** When true, the object tilts 45° on the X-axis (tips forward) during
+     *  a fold/unfold transition, then returns to 0° when the transition
+     *  completes. Only active while flat is changing. */
+    ytilt?: boolean;
     className?: string;
     style?: CSSProperties;
 };

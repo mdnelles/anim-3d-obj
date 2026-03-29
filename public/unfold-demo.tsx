@@ -27,7 +27,7 @@ export default function App() {
   const [flat, setFlat] = useState(false);
   const [oneAtATime, setOneAtATime] = useState(false);
   const [remainJoined, setRemainJoined] = useState(false);
-  const [sheen, setSheen] = useState(true);
+  const [ytilt, setYtilt] = useState(true);
 
   return (
     <div
@@ -55,7 +55,7 @@ export default function App() {
           transitionDuration={1}
           oneAtATime={oneAtATime}
           remainJoined={remainJoined}
-          sheen={sheen}
+          ytilt={ytilt}
           faces={faces}
           anim1={{
             name: "Y360",
@@ -86,10 +86,10 @@ export default function App() {
         <label style={checkboxStyle}>
           <input
             type="checkbox"
-            checked={sheen}
-            onChange={(e) => setSheen(e.target.checked)}
+            checked={ytilt}
+            onChange={(e) => setYtilt(e.target.checked)}
           />{" "}
-          sheen
+          ytilt
         </label>
       </div>
 

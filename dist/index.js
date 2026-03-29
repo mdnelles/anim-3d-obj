@@ -169,28 +169,6 @@ function faceAppearance(face, globalDef) {
   const body = face.body ?? globalDef?.body ?? null;
   return { style, className, body };
 }
-var Y_FACE_OFFSET = {
-  front: 0,
-  right: 0.25,
-  back: 0.5,
-  left: 0.75
-};
-function sheenOverlay(faceName, animDuration, isFlat) {
-  if (isFlat) return null;
-  const offset = Y_FACE_OFFSET[faceName];
-  if (offset === void 0) return null;
-  const delay = offset * animDuration;
-  return /* @__PURE__ */ jsx("div", { className: "anim3d-sheen", children: /* @__PURE__ */ jsx(
-    "div",
-    {
-      className: "anim3d-sheen-bar",
-      style: {
-        "--sheen-dur": animDuration + "s",
-        "--sheen-delay": delay + "s"
-      }
-    }
-  ) });
-}
 var DEFAULT_FACE_NAMES = [
   "front",
   "back",
@@ -227,7 +205,7 @@ var Obj = React.memo(
     transitionDuration = 1,
     oneAtATime = false,
     remainJoined = false,
-    sheen = false,
+    ytilt = false,
     className,
     style
   }) => {
@@ -238,7 +216,32 @@ var Obj = React.memo(
     const animation2 = toAnimationShorthand(anim2) ?? void 0;
     const faceList = faces && faces.length > 0 ? faces : DEFAULT_FACE_NAMES.map((name) => ({ name }));
     const transitionCss = (delay = 0) => `transform ${transitionDuration}s ease-in-out ${delay}s`;
-    const sheenDur = anim1?.duration ?? 6;
+    const tiltCount = React.useRef(0);
+    const prevFlat = React.useRef(flat);
+    const [tiltAnim, setTiltAnim] = React.useState(void 0);
+    React.useEffect(() => {
+      if (flat !== prevFlat.current) {
+        prevFlat.current = flat;
+        if (ytilt) {
+          tiltCount.current += 1;
+          const sideCount = faceList.filter(
+            (f) => ["front", "right", "back", "left"].includes(
+              f.name
+            )
+          ).length;
+          const totalDur = oneAtATime ? transitionDuration * sideCount : transitionDuration;
+          const name = tiltCount.current % 2 === 0 ? "anim3d-ytilt-a" : "anim3d-ytilt-b";
+          setTiltAnim(
+            `${name} ${totalDur}s ease-in-out 1 forwards`
+          );
+          const timer = setTimeout(
+            () => setTiltAnim(void 0),
+            totalDur * 1e3 + 50
+          );
+          return () => clearTimeout(timer);
+        }
+      }
+    }, [flat, ytilt, transitionDuration, oneAtATime, faceList]);
     const renderStandard = () => faceList.map((face, i) => {
       const dims = faceDimensions(face.name, w, h, d);
       const transform = flat ? faceTransformFlat(face.name, w, h, d) : faceTransform3D(face.name, w, h, d);
@@ -249,7 +252,7 @@ var Obj = React.memo(
       } = faceAppearance(face, globalDef);
       const idx = STAGGER_ORDER.indexOf(face.name);
       const delay = oneAtATime ? (idx >= 0 ? idx : i) * transitionDuration : 0;
-      return /* @__PURE__ */ jsxs(
+      return /* @__PURE__ */ jsx(
         "div",
         {
           className: fCls,
@@ -260,10 +263,7 @@ var Obj = React.memo(
             transform,
             transition: transitionCss(delay)
           },
-          children: [
-            body,
-            sheen && sheenOverlay(face.name, sheenDur, flat)
-          ]
+          children: body
         },
         face.name + "-" + i
       );
@@ -291,7 +291,7 @@ var Obj = React.memo(
           className: fCls,
           body
         } = faceAppearance(face, globalDef);
-        return /* @__PURE__ */ jsxs(
+        return /* @__PURE__ */ jsx(
           "div",
           {
             className: fCls,
@@ -305,10 +305,7 @@ var Obj = React.memo(
               boxSizing: "border-box",
               ...extra
             },
-            children: [
-              body,
-              sheen && sheenOverlay(face.name, sheenDur, flat)
-            ]
+            children: body
           },
           key
         );
@@ -458,27 +455,36 @@ var Obj = React.memo(
         children: /* @__PURE__ */ jsx(
           "div",
           {
-            className: "anim3d-wrapper",
             style: {
-              ...cssVars,
-              animation: flat ? "none" : animation1,
               transformStyle: "preserve-3d",
-              transition: transitionCss()
+              animation: tiltAnim
             },
-            children: /* @__PURE__ */ jsxs(
+            children: /* @__PURE__ */ jsx(
               "div",
               {
                 className: "anim3d-wrapper",
                 style: {
                   ...cssVars,
-                  animation: flat ? "none" : animation2,
+                  animation: flat ? "none" : animation1,
                   transformStyle: "preserve-3d",
                   transition: transitionCss()
                 },
-                children: [
-                  showCenterDiv && /* @__PURE__ */ jsx("div", { className: "anim3d-center" }),
-                  remainJoined ? renderJoined() : renderStandard()
-                ]
+                children: /* @__PURE__ */ jsxs(
+                  "div",
+                  {
+                    className: "anim3d-wrapper",
+                    style: {
+                      ...cssVars,
+                      animation: flat ? "none" : animation2,
+                      transformStyle: "preserve-3d",
+                      transition: transitionCss()
+                    },
+                    children: [
+                      showCenterDiv && /* @__PURE__ */ jsx("div", { className: "anim3d-center" }),
+                      remainJoined ? renderJoined() : renderStandard()
+                    ]
+                  }
+                )
               }
             )
           }
