@@ -36,3 +36,52 @@
    box-sizing: border-box;
    /* width/height/transform set inline per face */
 }
+
+/* ---- Sheen overlay ---- */
+
+.anim3d-sheen {
+   position: absolute;
+   inset: 0;
+   overflow: hidden;
+   pointer-events: none;
+   z-index: 1;
+}
+
+.anim3d-sheen-bar {
+   position: absolute;
+   top: 0;
+   left: 0;
+   width: 40%;
+   height: 100%;
+   background: linear-gradient(
+      105deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.35) 45%,
+      rgba(255, 255, 255, 0.5) 50%,
+      rgba(255, 255, 255, 0.35) 55%,
+      transparent 80%
+   );
+   opacity: 0;
+   transform: translateX(-100%);
+   animation: anim3d-sheen-sweep var(--sheen-dur, 6s) linear infinite;
+   animation-delay: var(--sheen-delay, 0s);
+}
+
+@keyframes anim3d-sheen-sweep {
+   0% {
+      transform: translateX(-100%);
+      opacity: 0;
+   }
+   2% {
+      opacity: 1;
+   }
+   14% {
+      transform: translateX(350%);
+      opacity: 0;
+   }
+   14.1%,
+   100% {
+      opacity: 0;
+      transform: translateX(-100%);
+   }
+}

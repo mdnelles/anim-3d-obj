@@ -86,6 +86,11 @@ export type ObjProps = {
     *  The left–front edge is the break point. */
    remainJoined?: boolean;
 
+   /** When true, a light-sheen sweeps across each face the moment it
+    *  rotates away from being face-on to the viewer.
+    *  Requires a Y-axis rotation animation (anim1) to function. */
+   sheen?: boolean;
+
    className?: string;
    style?: CSSProperties;
 };

@@ -179,6 +179,41 @@ function faceAppearance(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Sheen overlay — sweeps across each face as it leaves face-on       */
+/* ------------------------------------------------------------------ */
+
+/** Fraction of rotation cycle at which each face is face-on (Y-axis) */
+const Y_FACE_OFFSET: Record<string, number> = {
+   front: 0,
+   right: 0.25,
+   back: 0.5,
+   left: 0.75,
+};
+
+function sheenOverlay(
+   faceName: string,
+   animDuration: number,
+   isFlat: boolean
+): React.ReactNode {
+   if (isFlat) return null;
+   const offset = Y_FACE_OFFSET[faceName];
+   if (offset === undefined) return null; // no sheen for top/bottom etc.
+   const delay = offset * animDuration;
+
+   return (
+      <div className="anim3d-sheen">
+         <div
+            className="anim3d-sheen-bar"
+            style={{
+               "--sheen-dur": animDuration + "s",
+               "--sheen-delay": delay + "s",
+            } as React.CSSProperties}
+         />
+      </div>
+   );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Default 6-sided cube when no faces are provided                    */
 /* ------------------------------------------------------------------ */
 
@@ -228,6 +263,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
       transitionDuration = 1,
       oneAtATime = false,
       remainJoined = false,
+      sheen = false,
       className,
       style,
    }) => {
@@ -250,6 +286,9 @@ export const Obj: React.FC<ObjProps> = React.memo(
 
       const transitionCss = (delay = 0) =>
          `transform ${transitionDuration}s ease-in-out ${delay}s`;
+
+      // Duration for sheen (synced to anim1 rotation cycle)
+      const sheenDur = anim1?.duration ?? 6;
 
       /* ============================================================ */
       /*  Standard rendering (no remainJoined)                         */
@@ -286,6 +325,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                   }}
                >
                   {body}
+                  {sheen && sheenOverlay(face.name, sheenDur, flat)}
                </div>
             );
          });
@@ -349,6 +389,8 @@ export const Obj: React.FC<ObjProps> = React.memo(
                   }}
                >
                   {body}
+                  {sheen &&
+                     sheenOverlay(face.name, sheenDur, flat)}
                </div>
             );
          };

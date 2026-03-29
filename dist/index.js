@@ -169,6 +169,28 @@ function faceAppearance(face, globalDef) {
   const body = face.body ?? globalDef?.body ?? null;
   return { style, className, body };
 }
+var Y_FACE_OFFSET = {
+  front: 0,
+  right: 0.25,
+  back: 0.5,
+  left: 0.75
+};
+function sheenOverlay(faceName, animDuration, isFlat) {
+  if (isFlat) return null;
+  const offset = Y_FACE_OFFSET[faceName];
+  if (offset === void 0) return null;
+  const delay = offset * animDuration;
+  return /* @__PURE__ */ jsx("div", { className: "anim3d-sheen", children: /* @__PURE__ */ jsx(
+    "div",
+    {
+      className: "anim3d-sheen-bar",
+      style: {
+        "--sheen-dur": animDuration + "s",
+        "--sheen-delay": delay + "s"
+      }
+    }
+  ) });
+}
 var DEFAULT_FACE_NAMES = [
   "front",
   "back",
@@ -205,6 +227,7 @@ var Obj = React.memo(
     transitionDuration = 1,
     oneAtATime = false,
     remainJoined = false,
+    sheen = false,
     className,
     style
   }) => {
@@ -215,6 +238,7 @@ var Obj = React.memo(
     const animation2 = toAnimationShorthand(anim2) ?? void 0;
     const faceList = faces && faces.length > 0 ? faces : DEFAULT_FACE_NAMES.map((name) => ({ name }));
     const transitionCss = (delay = 0) => `transform ${transitionDuration}s ease-in-out ${delay}s`;
+    const sheenDur = anim1?.duration ?? 6;
     const renderStandard = () => faceList.map((face, i) => {
       const dims = faceDimensions(face.name, w, h, d);
       const transform = flat ? faceTransformFlat(face.name, w, h, d) : faceTransform3D(face.name, w, h, d);
@@ -225,7 +249,7 @@ var Obj = React.memo(
       } = faceAppearance(face, globalDef);
       const idx = STAGGER_ORDER.indexOf(face.name);
       const delay = oneAtATime ? (idx >= 0 ? idx : i) * transitionDuration : 0;
-      return /* @__PURE__ */ jsx(
+      return /* @__PURE__ */ jsxs(
         "div",
         {
           className: fCls,
@@ -236,7 +260,10 @@ var Obj = React.memo(
             transform,
             transition: transitionCss(delay)
           },
-          children: body
+          children: [
+            body,
+            sheen && sheenOverlay(face.name, sheenDur, flat)
+          ]
         },
         face.name + "-" + i
       );
@@ -264,7 +291,7 @@ var Obj = React.memo(
           className: fCls,
           body
         } = faceAppearance(face, globalDef);
-        return /* @__PURE__ */ jsx(
+        return /* @__PURE__ */ jsxs(
           "div",
           {
             className: fCls,
@@ -278,7 +305,10 @@ var Obj = React.memo(
               boxSizing: "border-box",
               ...extra
             },
-            children: body
+            children: [
+              body,
+              sheen && sheenOverlay(face.name, sheenDur, flat)
+            ]
           },
           key
         );
