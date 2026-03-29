@@ -1,9 +1,15 @@
-export { default as Obj } from "./components/Obj";
+export { Obj } from "./components/Obj";
+export { Obj as default } from "./components/Obj";
+export type { ObjProps } from "./types";
 export type {
-   ObjProps,
-   FaceDef,
-   GlobalDef,
    AnimationConfig,
-   FaceName,
+   AnimationDirection,
+   AnimationFill,
+   AnimationPlayState,
+   TimingFn,
    BuiltInAnimName,
+   FaceDef,
+   FaceName,
+   GlobalDef,
 } from "./types";
+export { resolveAnimation, toAnimationShorthand } from "./keyframes";

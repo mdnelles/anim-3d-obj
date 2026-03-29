@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>anim-3d-obj – Visual Test</title>
+  <style>
+    body { font-family: system-ui; background: #1a1a2e; color: #eee; display: flex; flex-wrap: wrap; gap: 60px; padding: 40px; justify-content: center; }
+    h2 { width: 100%; text-align: center; margin: 0; }
+    .test-card { text-align: center; }
+    .test-card p { margin-top: 12px; font-size: 13px; opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <h2>anim-3d-obj – Visual Tests</h2>
+
+  <div class="test-card" id="test1"></div>
+  <div class="test-card" id="test2"></div>
+  <div class="test-card" id="test3"></div>
+
+  <!-- Load React + ReactDOM from CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Inline the built CSS -->
+  <link rel="stylesheet" href="../dist/index.css" />
+
+  <!-- Load built ESM bundle and run tests -->
+  <script type="module">
+    import { Obj } from '../dist/index.js';
+    const h = React.createElement;
+
+    // Test 1: 6-sided cube with Y360 animation
+    ReactDOM.createRoot(document.getElementById('test1')).render(
+      h('div', null,
+        h(Obj, {
+          width: 120, height: 120, depth: 120,
+          perspective: 800,
+          faces: [
+            { name: 'front',  body: h('span', null, 'FRONT'),  style: { background: 'rgba(66,133,244,0.7)' } },
+            { name: 'back',   body: h('span', null, 'BACK'),   style: { background: 'rgba(234,67,53,0.7)' } },
+            { name: 'left',   body: h('span', null, 'LEFT'),   style: { background: 'rgba(251,188,4,0.7)' } },
+            { name: 'right',  body: h('span', null, 'RIGHT'),  style: { background: 'rgba(52,168,83,0.7)' } },
+            { name: 'top',    body: h('span', null, 'TOP'),    style: { background: 'rgba(155,89,182,0.7)' } },
+            { name: 'bottom', body: h('span', null, 'BOTTOM'), style: { background: 'rgba(230,126,34,0.7)' } },
+          ],
+          anim1: { name: 'Y360', duration: 6, timing: 'linear', iterationCount: 'infinite' },
+        }),
+        h('p', null, 'Y360 – full cube')
+      )
+    );
+
+    // Test 2: Rock animation with 3 faces + global defaults
+    ReactDOM.createRoot(document.getElementById('test2')).render(
+      h('div', null,
+        h(Obj, {
+          width: 140, height: 100, depth: 80,
+          perspective: 600,
+          global: { css: 'background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:#fff; font-size:14px;' },
+          faces: [
+            { name: 'front', body: 'Front' },
+            { name: 'left',  body: 'Left' },
+            { name: 'right', body: 'Right' },
+          ],
+          anim1: { name: 'rockY', degreesHi: 45, degreesLow: -45, duration: 4, timing: 'ease-in-out', direction: 'alternate', iterationCount: 'infinite' },
+        }),
+        h('p', null, 'rockY – 3 faces + global css')
+      )
+    );
+
+    // Test 3: Dual animation (X360 + Z360)
+    ReactDOM.createRoot(document.getElementById('test3')).render(
+      h('div', null,
+        h(Obj, {
+          width: 100, height: 100, depth: 100,
+          perspective: 700,
+          showCenterDiv: true,
+          faces: [
+            { name: 'front',  style: { background: 'rgba(0,255,200,0.5)', border: '1px solid #0fc' } },
+            { name: 'back',   style: { background: 'rgba(0,255,200,0.3)', border: '1px solid #0fc' } },
+            { name: 'left',   style: { background: 'rgba(0,200,255,0.3)', border: '1px solid #0cf' } },
+            { name: 'right',  style: { background: 'rgba(0,200,255,0.5)', border: '1px solid #0cf' } },
+            { name: 'top',    style: { background: 'rgba(200,0,255,0.3)', border: '1px solid #c0f' } },
+            { name: 'bottom', style: { background: 'rgba(200,0,255,0.5)', border: '1px solid #c0f' } },
+          ],
+          anim1: { name: 'X360', duration: 8, timing: 'linear', iterationCount: 'infinite' },
+          anim2: { name: 'Z360', duration: 12, timing: 'linear', iterationCount: 'infinite' },
+        }),
+        h('p', null, 'X360 + Z360 – dual animation')
+      )
+    );
+  </script>
+</body>
+</html>

@@ -1,31 +1,7 @@
-"use strict";
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-// src/index.ts
-var src_exports = {};
-__export(src_exports, {
-  Obj: () => Obj_default
-});
-module.exports = __toCommonJS(src_exports);
+import * as React from 'react';
+import { jsx, jsxs } from 'react/jsx-runtime';
 
 // src/components/Obj.tsx
-var import_react = require("react");
 
 // src/keyframes.ts
 function ensureStyleTag() {
@@ -91,142 +67,171 @@ function toAnimationShorthand(cfg) {
   const play = cfg.animationPlayState ?? "running";
   return `${name} ${dur} ${timing} ${delay} ${iter} ${dir} ${fill} ${play}`;
 }
-
-// src/components/Obj.tsx
-var import_obj = require("./obj-PY72GEW6.css");
-var import_jsx_runtime = require("react/jsx-runtime");
 function faceTransform(name, w, h, d) {
-  const z = d / 2;
+  const hw = w / 2;
+  const hh = h / 2;
+  const hd = d / 2;
   switch (name) {
     case "front":
-      return `translate3d(-50%, -50%, ${z}px)`;
+      return `translate(-50%, -50%) translateZ(${hd}px)`;
     case "back":
-      return `translate3d(-50%, -50%, ${-z}px) rotateY(180deg)`;
+      return `translate(-50%, -50%) rotateY(180deg) translateZ(${hd}px)`;
     case "left":
-      return `translate3d(-50%, -50%, 0) rotateY(-90deg) translateZ(${w / 2}px)`;
+      return `translate(-50%, -50%) rotateY(-90deg) translateZ(${hw}px)`;
     case "right":
-      return `translate3d(-50%, -50%, 0) rotateY(90deg) translateZ(${w / 2}px)`;
+      return `translate(-50%, -50%) rotateY(90deg) translateZ(${hw}px)`;
     case "top":
-      return `translate3d(-50%, -50%, 0) rotateX(90deg) translateZ(${h / 2}px)`;
+      return `translate(-50%, -50%) rotateX(90deg) translateZ(${hh}px)`;
     case "bottom":
-      return `translate3d(-50%, -50%, 0) rotateX(-90deg) translateZ(${h / 2}px)`;
-    // legacy/extra – position near top/bottom, front/back edges
+      return `translate(-50%, -50%) rotateX(-90deg) translateZ(${hh}px)`;
+    // Legacy names – map to angled half-faces
     case "top_front":
-      return `translate3d(-50%, -50%, ${z / 2}px) rotateX(75deg)`;
+      return `translate(-50%, -50%) rotateX(45deg) translateZ(${hh}px)`;
     case "top_rear":
-      return `translate3d(-50%, -50%, ${-z / 2}px) rotateX(105deg)`;
+      return `translate(-50%, -50%) rotateX(135deg) translateZ(${hh}px)`;
     case "bottom_front":
-      return `translate3d(-50%, -50%, ${z / 2}px) rotateX(-75deg)`;
+      return `translate(-50%, -50%) rotateX(-45deg) translateZ(${hh}px)`;
     case "bottom_rear":
-      return `translate3d(-50%, -50%, ${-z / 2}px) rotateX(-105deg)`;
+      return `translate(-50%, -50%) rotateX(-135deg) translateZ(${hh}px)`;
     default:
-      return `translate3d(-50%, -50%, ${z}px)`;
+      return `translate(-50%, -50%) translateZ(${hd}px)`;
   }
 }
-function mergeStyles(inlineCSS, style) {
-  const out = { ...style ?? {} };
-  if (inlineCSS) {
-    inlineCSS.split(";").map((s) => s.trim()).filter(Boolean).forEach((rule) => {
-      const [k, v] = rule.split(":");
-      if (!k || !v) return;
-      const key = k.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-      out[key] = v.trim();
-    });
+function parseCssText(css) {
+  if (!css) return {};
+  const style = {};
+  css.split(";").forEach((rule) => {
+    const [prop, ...rest] = rule.split(":");
+    if (!prop || rest.length === 0) return;
+    const key = prop.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    style[key] = rest.join(":").trim();
+  });
+  return style;
+}
+function faceDimensions(name, w, h, d) {
+  switch (name) {
+    case "left":
+    case "right":
+      return { width: d, height: h };
+    case "top":
+    case "bottom":
+    case "top_front":
+    case "top_rear":
+    case "bottom_front":
+    case "bottom_rear":
+      return { width: w, height: d };
+    default:
+      return { width: w, height: h };
   }
-  return out;
 }
-function Face({
-  w,
-  h,
-  d,
-  face,
-  global
-}) {
-  const base = (0, import_react.useMemo)(
-    () => mergeStyles(global?.css, global?.style),
-    [global]
-  );
-  const merged = (0, import_react.useMemo)(
-    () => ({ ...base, ...mergeStyles(face.css, face.style) }),
-    [base, face.css, face.style]
-  );
-  const content = face.body ?? global?.body ?? null;
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-    "div",
-    {
-      className: `anim3d-face ${face.className ?? ""}`,
-      style: {
-        transform: faceTransform(face.name, w, h, d),
-        ...merged
-      },
-      "data-face": face.name,
-      children: typeof content === "string" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: content }) : content
-    }
-  );
-}
-var Obj = ({
-  width = 160,
-  height = 160,
-  depth = 150,
-  perspective = 500,
-  perspectiveOrigin = "50% 50%",
-  faces = [
-    { name: "front", body: "FRONT" },
-    { name: "back", body: "BACK" },
-    { name: "left", body: "LEFT" },
-    { name: "right", body: "RIGHT" },
-    { name: "top", body: "TOP" },
-    { name: "bottom", body: "BOTTOM" }
-  ],
-  global,
-  anim1,
-  anim2,
-  showCenterDiv = false,
-  className,
-  style
-}) => {
-  const resolvedAnim1 = toAnimationShorthand(anim1);
-  const resolvedAnim2 = toAnimationShorthand(anim2);
-  const animation = [resolvedAnim1, resolvedAnim2].filter(Boolean).join(", ");
-  const stageStyle = {
-    perspective: `${perspective}px`,
-    perspectiveOrigin
-  };
-  const wrapperStyle = {
-    // consumed by CSS var
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    "--obj-w": `${width}px`,
-    "--obj-h": `${height}px`,
-    width,
-    height,
-    "animation": animation || void 0
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-    "div",
-    {
-      className: `anim3d-stage ${className ?? ""}`,
-      style: { ...stageStyle, ...style },
-      children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "anim3d-wrapper", style: wrapperStyle, children: [
-        showCenterDiv && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "anim3d-center" }),
-        faces.map((f, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-          Face,
+var DEFAULT_FACE_NAMES = [
+  "front",
+  "back",
+  "left",
+  "right",
+  "top",
+  "bottom"
+];
+var Obj = React.memo(
+  ({
+    width = 160,
+    height = 160,
+    depth = 150,
+    perspective = 600,
+    perspectiveOrigin = "50% 50%",
+    faces,
+    global: globalDef,
+    anim1,
+    anim2,
+    showCenterDiv = false,
+    className,
+    style
+  }) => {
+    const w = typeof width === "number" ? width : parseFloat(width);
+    const h = typeof height === "number" ? height : parseFloat(height);
+    const d = typeof depth === "number" ? depth : parseFloat(depth);
+    const animation1 = toAnimationShorthand(anim1) ?? void 0;
+    const animation2 = toAnimationShorthand(anim2) ?? void 0;
+    const faceList = faces && faces.length > 0 ? faces : DEFAULT_FACE_NAMES.map((name) => ({ name }));
+    const renderFace = (face, i) => {
+      const dims = faceDimensions(face.name, w, h, d);
+      const transform = faceTransform(face.name, w, h, d);
+      const globalStyle = parseCssText(globalDef?.css);
+      const faceInlineStyle = parseCssText(face.css);
+      const mergedStyle = {
+        ...globalStyle,
+        ...globalDef?.style ?? {},
+        ...faceInlineStyle,
+        ...face.style ?? {},
+        width: dims.width,
+        height: dims.height,
+        transform
+      };
+      const body = face.body ?? globalDef?.body ?? null;
+      const faceClassName = [
+        "anim3d-face",
+        face.className
+      ].filter(Boolean).join(" ");
+      return /* @__PURE__ */ jsx(
+        "div",
+        {
+          className: faceClassName,
+          style: mergedStyle,
+          children: body
+        },
+        face.name + "-" + i
+      );
+    };
+    const cssVars = {
+      "--obj-w": w + "px",
+      "--obj-h": h + "px",
+      "--obj-d": d + "px"
+    };
+    return /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: ["anim3d-stage", className].filter(Boolean).join(" "),
+        style: {
+          perspective,
+          perspectiveOrigin,
+          ...cssVars,
+          ...style
+        },
+        "data-anim-3d-obj": true,
+        role: "img",
+        "aria-label": "3D object",
+        children: /* @__PURE__ */ jsx(
+          "div",
           {
-            w: width,
-            h: height,
-            d: depth,
-            face: f,
-            global
-          },
-          `${f.name}-${i}`
-        ))
-      ] })
-    }
-  );
-};
-var Obj_default = Obj;
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  Obj
-});
+            className: "anim3d-wrapper",
+            style: {
+              ...cssVars,
+              animation: animation1,
+              transformStyle: "preserve-3d"
+            },
+            children: /* @__PURE__ */ jsxs(
+              "div",
+              {
+                className: "anim3d-wrapper",
+                style: {
+                  ...cssVars,
+                  animation: animation2,
+                  transformStyle: "preserve-3d"
+                },
+                children: [
+                  showCenterDiv && /* @__PURE__ */ jsx("div", { className: "anim3d-center" }),
+                  faceList.map(renderFace)
+                ]
+              }
+            )
+          }
+        )
+      }
+    );
+  }
+);
+Obj.displayName = "Obj";
+
+export { Obj, Obj as default, resolveAnimation, toAnimationShorthand };
+//# sourceMappingURL=index.js.map
 //# sourceMappingURL=index.js.map
