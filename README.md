@@ -148,7 +148,11 @@ pnpm add anim-3d-obj
 
 import React from "react";
 import { Obj } from "anim-3d-obj";
+```
 
+## Full Example
+
+```bash
 function App() {
   const global = {
     css: "border: 1px solid #00f; color:#00f; backface-visibility: visible; text-align:center; line-height: 120px; font-size: 14px;",

@@ -1,2 +1,56 @@
-export { A as AnimationConfig, B as BuiltInAnimName, F as FaceDef, a as FaceName, G as GlobalDef, default as Obj, O as ObjProps } from './components/Obj.js';
-import 'react';
+import * as React from 'react';
+import { CSSProperties, ReactNode } from 'react';
+
+type AnimationDirection = "normal" | "reverse" | "alternate" | "alternate-reverse";
+type AnimationFill = "none" | "forwards" | "backwards" | "both";
+type AnimationPlayState = "running" | "paused";
+type TimingFn = "linear" | "ease" | "ease-in" | "ease-out" | "ease-in-out" | string;
+type BuiltInAnimName = "Y360" | "X360" | "Z360" | "rockY" | "rockX";
+type AnimationConfig = {
+    name: BuiltInAnimName | string;
+    degreesHi?: number;
+    degreesLow?: number;
+    duration?: number;
+    delay?: number;
+    iterationCount?: number | "infinite";
+    direction?: AnimationDirection;
+    timing?: TimingFn;
+    fillMode?: AnimationFill;
+    animationPlayState?: AnimationPlayState;
+};
+type FaceName = "front" | "back" | "left" | "right" | "top" | "bottom" | "top_rear" | "top_front" | "bottom_rear" | "bottom_front";
+type FaceDef = {
+    name: FaceName | string;
+    css?: string;
+    style?: CSSProperties;
+    body?: ReactNode | string;
+    className?: string;
+};
+type GlobalDef = {
+    css?: string;
+    style?: CSSProperties;
+    body?: ReactNode | string;
+};
+type ObjProps = {
+    width?: number;
+    height?: number;
+    depth?: number;
+    perspective?: number;
+    perspectiveOrigin?: string;
+    faces?: FaceDef[];
+    global?: GlobalDef;
+    anim1?: AnimationConfig;
+    anim2?: AnimationConfig;
+    showCenterDiv?: boolean;
+    className?: string;
+    style?: CSSProperties;
+};
+
+declare const Obj: React.FC<ObjProps>;
+
+/** Returns a concrete animation-name and ensures keyframes exist (for built-ins) */
+declare function resolveAnimation(cfg?: AnimationConfig): string | null;
+/** Build the full CSS animation shorthand from a config and resolved name */
+declare function toAnimationShorthand(cfg?: AnimationConfig): string | null;
+
+export { type AnimationConfig, type AnimationDirection, type AnimationFill, type AnimationPlayState, type BuiltInAnimName, type FaceDef, type FaceName, type GlobalDef, Obj, type ObjProps, type TimingFn, Obj as default, resolveAnimation, toAnimationShorthand };

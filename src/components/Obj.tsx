@@ -1,168 +1,228 @@
-import React, { useMemo } from "react";
-import type { CSSProperties, ReactNode } from "react";
-import { FaceDef, GlobalDef, ObjProps, FaceName } from "../types";
+import * as React from "react";
+import type {
+   ObjProps,
+   FaceDef,
+   FaceName,
+   GlobalDef,
+} from "../types";
 import { toAnimationShorthand } from "../keyframes";
 import "../styles/obj.css";
 
-/** Map face name -> transform so it sits on a rectangular prism */
-function faceTransform(name: string, w: number, h: number, d: number): string {
-   const z = d / 2;
+// Re-export the canonical ObjProps from types.ts
+export type { ObjProps } from "../types";
+
+/* ------------------------------------------------------------------ */
+/*  Face transform map                                                 */
+/* ------------------------------------------------------------------ */
+
+function faceTransform(
+   name: string,
+   w: number,
+   h: number,
+   d: number
+): string {
+   const hw = w / 2;
+   const hh = h / 2;
+   const hd = d / 2;
+
    switch (name as FaceName) {
       case "front":
-         return `translate3d(-50%, -50%, ${z}px)`;
+         return `translate(-50%, -50%) translateZ(${hd}px)`;
       case "back":
-         return `translate3d(-50%, -50%, ${-z}px) rotateY(180deg)`;
+         return `translate(-50%, -50%) rotateY(180deg) translateZ(${hd}px)`;
       case "left":
-         return `translate3d(-50%, -50%, 0) rotateY(-90deg) translateZ(${
-            w / 2
-         }px)`;
+         return `translate(-50%, -50%) rotateY(-90deg) translateZ(${hw}px)`;
       case "right":
-         return `translate3d(-50%, -50%, 0) rotateY(90deg) translateZ(${
-            w / 2
-         }px)`;
+         return `translate(-50%, -50%) rotateY(90deg) translateZ(${hw}px)`;
       case "top":
-         return `translate3d(-50%, -50%, 0) rotateX(90deg) translateZ(${
-            h / 2
-         }px)`;
+         return `translate(-50%, -50%) rotateX(90deg) translateZ(${hh}px)`;
       case "bottom":
-         return `translate3d(-50%, -50%, 0) rotateX(-90deg) translateZ(${
-            h / 2
-         }px)`;
-      // legacy/extra – position near top/bottom, front/back edges
+         return `translate(-50%, -50%) rotateX(-90deg) translateZ(${hh}px)`;
+      // Legacy names – map to angled half-faces
       case "top_front":
-         return `translate3d(-50%, -50%, ${z / 2}px) rotateX(75deg)`;
+         return `translate(-50%, -50%) rotateX(45deg) translateZ(${hh}px)`;
       case "top_rear":
-         return `translate3d(-50%, -50%, ${-z / 2}px) rotateX(105deg)`;
+         return `translate(-50%, -50%) rotateX(135deg) translateZ(${hh}px)`;
       case "bottom_front":
-         return `translate3d(-50%, -50%, ${z / 2}px) rotateX(-75deg)`;
+         return `translate(-50%, -50%) rotateX(-45deg) translateZ(${hh}px)`;
       case "bottom_rear":
-         return `translate3d(-50%, -50%, ${-z / 2}px) rotateX(-105deg)`;
+         return `translate(-50%, -50%) rotateX(-135deg) translateZ(${hh}px)`;
       default:
-         return `translate3d(-50%, -50%, ${z}px)`;
+         return `translate(-50%, -50%) translateZ(${hd}px)`;
    }
 }
 
-/** Merge legacy CSS string + style object */
-function mergeStyles(inlineCSS?: string, style?: CSSProperties): CSSProperties {
-   const out: CSSProperties = { ...(style ?? {}) };
-   if (inlineCSS) {
-      // naive parser: split by ;, then key:value
-      inlineCSS
-         .split(";")
-         .map((s) => s.trim())
-         .filter(Boolean)
-         .forEach((rule) => {
-            const [k, v] = rule.split(":");
-            if (!k || !v) return;
-            const key = k
-               .trim()
-               .replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-            (out as any)[key] = v.trim();
-         });
+/* ------------------------------------------------------------------ */
+/*  Parse a legacy CSS text string into a CSSProperties object         */
+/* ------------------------------------------------------------------ */
+
+function parseCssText(css?: string): React.CSSProperties {
+   if (!css) return {};
+   const style: Record<string, string> = {};
+   css.split(";").forEach((rule) => {
+      const [prop, ...rest] = rule.split(":");
+      if (!prop || rest.length === 0) return;
+      const key = prop
+         .trim()
+         .replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      style[key] = rest.join(":").trim();
+   });
+   return style as React.CSSProperties;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Resolve face dimensions for non-standard faces                     */
+/* ------------------------------------------------------------------ */
+
+function faceDimensions(
+   name: string,
+   w: number,
+   h: number,
+   d: number
+): { width: number; height: number } {
+   switch (name as FaceName) {
+      case "left":
+      case "right":
+         return { width: d, height: h };
+      case "top":
+      case "bottom":
+      case "top_front":
+      case "top_rear":
+      case "bottom_front":
+      case "bottom_rear":
+         return { width: w, height: d };
+      default:
+         return { width: w, height: h };
    }
-   return out;
 }
 
-function Face({
-   w,
-   h,
-   d,
-   face,
-   global,
-}: {
-   w: number;
-   h: number;
-   d: number;
-   face: FaceDef;
-   global?: GlobalDef;
-}) {
-   const base = useMemo(
-      () => mergeStyles(global?.css, global?.style),
-      [global]
-   );
-   const merged = useMemo(
-      () => ({ ...base, ...mergeStyles(face.css, face.style) }),
-      [base, face.css, face.style]
-   );
+/* ------------------------------------------------------------------ */
+/*  Default 6-sided cube when no faces are provided                    */
+/* ------------------------------------------------------------------ */
 
-   const content: ReactNode = face.body ?? global?.body ?? null;
+const DEFAULT_FACE_NAMES: FaceName[] = [
+   "front",
+   "back",
+   "left",
+   "right",
+   "top",
+   "bottom",
+];
 
-   return (
-      <div
-         className={`anim3d-face ${face.className ?? ""}`}
-         style={{
-            transform: faceTransform(face.name, w, h, d),
-            ...merged,
-         }}
-         data-face={face.name}
-      >
-         {typeof content === "string" ? <span>{content}</span> : content}
-      </div>
-   );
-}
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
-const Obj: React.FC<ObjProps> = ({
-   width = 160,
-   height = 160,
-   depth = 150,
-   perspective = 500,
-   perspectiveOrigin = "50% 50%",
-   faces = [
-      { name: "front", body: "FRONT" },
-      { name: "back", body: "BACK" },
-      { name: "left", body: "LEFT" },
-      { name: "right", body: "RIGHT" },
-      { name: "top", body: "TOP" },
-      { name: "bottom", body: "BOTTOM" },
-   ],
-   global,
-   anim1,
-   anim2,
-   showCenterDiv = false,
-   className,
-   style,
-}) => {
-   const resolvedAnim1 = toAnimationShorthand(anim1);
-   const resolvedAnim2 = toAnimationShorthand(anim2);
-   const animation = [resolvedAnim1, resolvedAnim2].filter(Boolean).join(", ");
+export const Obj: React.FC<ObjProps> = React.memo(
+   ({
+      width = 160,
+      height = 160,
+      depth = 150,
+      perspective = 600,
+      perspectiveOrigin = "50% 50%",
+      faces,
+      global: globalDef,
+      anim1,
+      anim2,
+      showCenterDiv = false,
+      className,
+      style,
+   }) => {
+      const w = typeof width === "number" ? width : parseFloat(width);
+      const h = typeof height === "number" ? height : parseFloat(height);
+      const d = typeof depth === "number" ? depth : parseFloat(depth);
 
-   const stageStyle: CSSProperties = {
-      perspective: `${perspective}px`,
-      perspectiveOrigin,
-   };
+      // Resolve animation shorthands
+      const animation1 = toAnimationShorthand(anim1) ?? undefined;
+      const animation2 = toAnimationShorthand(anim2) ?? undefined;
 
-   const wrapperStyle: CSSProperties = {
-      // consumed by CSS var
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      "--obj-w": `${width}px`,
-      "--obj-h": `${height}px`,
-      width,
-      height,
-      "animation": animation || undefined,
-   };
+      // Determine which faces to render
+      const faceList: FaceDef[] =
+         faces && faces.length > 0
+            ? faces
+            : DEFAULT_FACE_NAMES.map((name) => ({ name }));
 
-   return (
-      <div
-         className={`anim3d-stage ${className ?? ""}`}
-         style={{ ...stageStyle, ...style }}
-      >
-         <div className='anim3d-wrapper' style={wrapperStyle as any}>
-            {showCenterDiv && <div className='anim3d-center' />}
-            {faces.map((f, i) => (
-               <Face
-                  key={`${f.name}-${i}`}
-                  w={width}
-                  h={height}
-                  d={depth}
-                  face={f}
-                  global={global}
-               />
-            ))}
+      // Merge global defaults into each face
+      const renderFace = (face: FaceDef, i: number) => {
+         const dims = faceDimensions(face.name, w, h, d);
+         const transform = faceTransform(face.name, w, h, d);
+
+         const globalStyle = parseCssText(globalDef?.css);
+         const faceInlineStyle = parseCssText(face.css);
+
+         const mergedStyle: React.CSSProperties = {
+            ...globalStyle,
+            ...(globalDef?.style ?? {}),
+            ...faceInlineStyle,
+            ...(face.style ?? {}),
+            width: dims.width,
+            height: dims.height,
+            transform,
+         };
+
+         const body = face.body ?? globalDef?.body ?? null;
+         const faceClassName = [
+            "anim3d-face",
+            face.className,
+         ]
+            .filter(Boolean)
+            .join(" ");
+
+         return (
+            <div
+               key={face.name + "-" + i}
+               className={faceClassName}
+               style={mergedStyle}
+            >
+               {body}
+            </div>
+         );
+      };
+
+      const cssVars = {
+         "--obj-w": w + "px",
+         "--obj-h": h + "px",
+         "--obj-d": d + "px",
+      } as React.CSSProperties;
+
+      return (
+         <div
+            className={["anim3d-stage", className].filter(Boolean).join(" ")}
+            style={{
+               perspective,
+               perspectiveOrigin,
+               ...cssVars,
+               ...style,
+            }}
+            data-anim-3d-obj
+            role="img"
+            aria-label="3D object"
+         >
+            {/* Outer animation wrapper (anim1) */}
+            <div
+               className="anim3d-wrapper"
+               style={{
+                  ...cssVars,
+                  animation: animation1,
+                  transformStyle: "preserve-3d",
+               }}
+            >
+               {/* Inner animation wrapper (anim2) */}
+               <div
+                  className="anim3d-wrapper"
+                  style={{
+                     ...cssVars,
+                     animation: animation2,
+                     transformStyle: "preserve-3d",
+                  }}
+               >
+                  {showCenterDiv && <div className="anim3d-center" />}
+                  {faceList.map(renderFace)}
+               </div>
+            </div>
          </div>
-      </div>
-   );
-};
+      );
+   }
+);
 
-export default Obj;
-export { Obj };
+Obj.displayName = "Obj";
