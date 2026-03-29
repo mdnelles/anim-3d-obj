@@ -51,7 +51,7 @@ type ObjProps = {
     /** When true, connected edges stay joined during unfold (front→right→back chain).
      *  The left–front edge is the break point. */
     remainJoined?: boolean;
-    /** When true, the object tilts 45° on the X-axis (tips forward) during
+    /** When true, the object tilts 45° on the X-axis (bird's-eye view) during
      *  a fold/unfold transition, then returns to 0° when the transition
      *  completes. Only active while flat is changing. */
     ytilt?: boolean;
