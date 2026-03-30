@@ -9,6 +9,7 @@ export type {
    TimingFn,
    BuiltInAnimName,
    FaceDef,
+   FaceChainEffect,
    FaceName,
    GlobalDef,
 } from "./types";

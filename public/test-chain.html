@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>anim-3d-obj – Chain Animation Tests</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui; background: #1a1a2e; color: #eee;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 40px 20px; gap: 40px; margin: 0;
+    }
+    h2 { margin: 0; }
+    .row { display: flex; gap: 60px; flex-wrap: wrap; justify-content: center; }
+    .demo { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .demo p { margin: 0; font-size: 13px; opacity: 0.6; max-width: 200px; text-align: center; }
+    .obj-box { min-height: 200px; display: flex; align-items: center; justify-content: center; }
+    button {
+      padding: 8px 22px; font-size: 14px; border: 1px solid #555;
+      border-radius: 6px; background: #2a2a4a; color: #eee; cursor: pointer;
+    }
+    button:hover { background: #3a3a6a; }
+    .phase-tag {
+      font-size: 12px; padding: 3px 10px; border-radius: 4px;
+      background: #333; font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h2>Chain Animation Demo</h2>
+  <p style="opacity:0.5; margin:0;">Unfold → chain effects → reverse undoes chain first, then folds</p>
+
+  <div class="row">
+    <!-- Demo 1: Scale only (2 faces) -->
+    <div class="demo">
+      <div class="obj-box" id="d1"></div>
+      <button id="b1">Unfold + Chain</button>
+      <div class="phase-tag" id="p1">folded</div>
+      <p>Scale: face 1 grows 1.4x wide, face 2 grows 1.3x tall</p>
+    </div>
+
+    <!-- Demo 2: Color + Opacity (2 faces) -->
+    <div class="demo">
+      <div class="obj-box" id="d2"></div>
+      <button id="b2">Unfold + Chain</button>
+      <div class="phase-tag" id="p2">folded</div>
+      <p>Color & opacity: face 1 turns purple, face 2 fades to 40%</p>
+    </div>
+
+    <!-- Demo 3: All combined (2 faces) -->
+    <div class="demo">
+      <div class="obj-box" id="d3"></div>
+      <button id="b3">Unfold + Chain</button>
+      <div class="phase-tag" id="p3">folded</div>
+      <p>Combined: scale + color + opacity on both faces</p>
+    </div>
+
+    <!-- Demo 4: 4 faces with staggered chain -->
+    <div class="demo">
+      <div class="obj-box" id="d4"></div>
+      <button id="b4">Unfold + Chain</button>
+      <div class="phase-tag" id="p4">folded</div>
+      <p>4 faces, staggered chain delays</p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <link rel="stylesheet" href="../dist/index.css" />
+
+  <script type="module">
+    import { Obj } from '../dist/index.js';
+    const h = React.createElement;
+
+    const fs = (bg) => ({
+      background: bg,
+      border: '1px solid rgba(255,255,255,0.25)',
+      color: '#fff', fontSize: '28px', fontWeight: 'bold',
+    });
+
+    const twoFaces = [
+      { name: 'front', body: '1', style: fs('rgba(66,133,244,0.85)') },
+      { name: 'right', body: '2', style: fs('rgba(234,67,53,0.85)') },
+    ];
+
+    const fourFaces = [
+      { name: 'front', body: '1', style: fs('rgba(66,133,244,0.85)') },
+      { name: 'right', body: '2', style: fs('rgba(234,67,53,0.85)') },
+      { name: 'back',  body: '3', style: fs('rgba(251,188,4,0.85)') },
+      { name: 'left',  body: '4', style: fs('rgba(52,168,83,0.85)') },
+    ];
+
+    function Demo({ id, faces, chainEffects, oneAtATime }) {
+      const [flat, setFlat] = React.useState(false);
+      const [phase, setPhase] = React.useState('folded');
+      const btn = document.getElementById('b' + id);
+      const ptag = document.getElementById('p' + id);
+
+      React.useEffect(() => {
+        const handler = () => setFlat(f => !f);
+        btn.addEventListener('click', handler);
+        return () => btn.removeEventListener('click', handler);
+      }, []);
+
+      React.useEffect(() => {
+        btn.textContent = flat ? 'Reverse' : 'Unfold + Chain';
+      }, [flat]);
+
+      const updatePhase = (p) => {
+        setPhase(p);
+        ptag.textContent = p;
+      };
+
+      return h(Obj, {
+        width: 100, height: 100, depth: 100,
+        perspective: 700,
+        flat,
+        transitionDuration: 0.8,
+        oneAtATime: oneAtATime || false,
+        faces,
+        chainEffects,
+        anim1: { name: 'Y360', duration: 6, timing: 'linear', iterationCount: 'infinite' },
+        onChainComplete: () => updatePhase('chained'),
+        onChainReverseComplete: () => updatePhase('folded'),
+      });
+    }
+
+    // Demo 1: Scale only
+    ReactDOM.createRoot(document.getElementById('d1')).render(
+      h(Demo, {
+        id: '1',
+        faces: twoFaces,
+        chainEffects: [
+          { faceName: 'front', scaleX: 1.4, duration: 0.6 },
+          { faceName: 'right', scaleY: 1.3, duration: 0.6, delay: 0.2 },
+        ],
+      })
+    );
+
+    // Demo 2: Color + Opacity
+    ReactDOM.createRoot(document.getElementById('d2')).render(
+      h(Demo, {
+        id: '2',
+        faces: twoFaces,
+        chainEffects: [
+          { faceName: 'front', background: 'rgba(156,39,176,0.9)', duration: 0.8 },
+          { faceName: 'right', opacity: 0.4, duration: 0.8, delay: 0.1 },
+        ],
+      })
+    );
+
+    // Demo 3: All combined
+    ReactDOM.createRoot(document.getElementById('d3')).render(
+      h(Demo, {
+        id: '3',
+        faces: twoFaces,
+        chainEffects: [
+          { faceName: 'front', scaleX: 1.3, background: 'rgba(0,200,83,0.9)', opacity: 0.8, duration: 0.7 },
+          { faceName: 'right', scaleY: 1.2, scaleX: 0.8, background: 'rgba(255,152,0,0.9)', duration: 0.7, delay: 0.15 },
+        ],
+      })
+    );
+
+    // Demo 4: 4 faces staggered
+    ReactDOM.createRoot(document.getElementById('d4')).render(
+      h(Demo, {
+        id: '4',
+        faces: fourFaces,
+        oneAtATime: true,
+        chainEffects: [
+          { faceName: 'front', scaleX: 1.2, background: 'rgba(233,30,99,0.9)', duration: 0.5 },
+          { faceName: 'right', scaleY: 1.3, opacity: 0.6, duration: 0.5, delay: 0.15 },
+          { faceName: 'back', background: 'rgba(0,150,136,0.9)', scaleX: 1.1, duration: 0.5, delay: 0.3 },
+          { faceName: 'left', opacity: 0.5, scaleY: 1.2, duration: 0.5, delay: 0.45 },
+        ],
+      })
+    );
+  </script>
+</body>
+</html>

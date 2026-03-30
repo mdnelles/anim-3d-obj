@@ -31,6 +31,18 @@ type GlobalDef = {
     style?: CSSProperties;
     body?: ReactNode | string;
 };
+/** Effect applied to a specific face after unfold completes (chained animation).
+ *  On reverse, these effects are undone before the fold begins. */
+type FaceChainEffect = {
+    faceName: string;
+    scaleX?: number;
+    scaleY?: number;
+    background?: string;
+    opacity?: number;
+    duration?: number;
+    delay?: number;
+    timing?: TimingFn;
+};
 type ObjProps = {
     width?: number;
     height?: number;
@@ -55,6 +67,16 @@ type ObjProps = {
      *  a fold/unfold transition, then returns to 0° when the transition
      *  completes. Only active while flat is changing. */
     ytilt?: boolean;
+    /** When true, faces are hidden when rotated away from the viewer
+     *  (CSS backface-visibility: hidden). Default false. */
+    backfaceHidden?: boolean;
+    /** Effects applied to individual faces after the unfold completes.
+     *  Reversed automatically before a fold begins. */
+    chainEffects?: FaceChainEffect[];
+    /** Called when the full forward chain (unfold + effects) completes */
+    onChainComplete?: () => void;
+    /** Called when the full reverse chain (un-effects + fold) completes */
+    onChainReverseComplete?: () => void;
     className?: string;
     style?: CSSProperties;
 };
@@ -66,4 +88,4 @@ declare function resolveAnimation(cfg?: AnimationConfig): string | null;
 /** Build the full CSS animation shorthand from a config and resolved name */
 declare function toAnimationShorthand(cfg?: AnimationConfig): string | null;
 
-export { type AnimationConfig, type AnimationDirection, type AnimationFill, type AnimationPlayState, type BuiltInAnimName, type FaceDef, type FaceName, type GlobalDef, Obj, type ObjProps, type TimingFn, Obj as default, resolveAnimation, toAnimationShorthand };
+export { type AnimationConfig, type AnimationDirection, type AnimationFill, type AnimationPlayState, type BuiltInAnimName, type FaceChainEffect, type FaceDef, type FaceName, type GlobalDef, Obj, type ObjProps, type TimingFn, Obj as default, resolveAnimation, toAnimationShorthand };

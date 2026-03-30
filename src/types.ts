@@ -59,6 +59,19 @@ export type GlobalDef = {
    body?: ReactNode | string;
 };
 
+/** Effect applied to a specific face after unfold completes (chained animation).
+ *  On reverse, these effects are undone before the fold begins. */
+export type FaceChainEffect = {
+   faceName: string; // which face to target
+   scaleX?: number; // scale factor (1 = no change)
+   scaleY?: number;
+   background?: string; // new background colour
+   opacity?: number; // 0–1
+   duration?: number; // seconds, default 0.5
+   delay?: number; // seconds delay after chain phase starts
+   timing?: TimingFn;
+};
+
 export type ObjProps = {
    width?: number; // px
    height?: number; // px
@@ -90,6 +103,19 @@ export type ObjProps = {
     *  a fold/unfold transition, then returns to 0° when the transition
     *  completes. Only active while flat is changing. */
    ytilt?: boolean;
+
+   /** When true, faces are hidden when rotated away from the viewer
+    *  (CSS backface-visibility: hidden). Default false. */
+   backfaceHidden?: boolean;
+
+   /** Effects applied to individual faces after the unfold completes.
+    *  Reversed automatically before a fold begins. */
+   chainEffects?: FaceChainEffect[];
+
+   /** Called when the full forward chain (unfold + effects) completes */
+   onChainComplete?: () => void;
+   /** Called when the full reverse chain (un-effects + fold) completes */
+   onChainReverseComplete?: () => void;
 
    className?: string;
    style?: CSSProperties;

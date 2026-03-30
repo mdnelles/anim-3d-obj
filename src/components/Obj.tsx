@@ -3,6 +3,7 @@ import type {
    ObjProps,
    FaceDef,
    FaceName,
+   FaceChainEffect,
    GlobalDef,
 } from "../types";
 import { toAnimationShorthand } from "../keyframes";
@@ -210,6 +211,24 @@ const STAGGER_ORDER: string[] = [
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Animation phase state machine:
+ *
+ *   folded ──(flat=true)──► unfolding ──(done)──► chaining ──(done)──► chained
+ *     ▲                                                                   │
+ *     └──(done)── folding ◄──(done)── unchaining ◄──(flat=false)──────────┘
+ *
+ * When there are no chainEffects the chaining/unchaining phases are
+ * zero-duration and effectively skipped.
+ */
+type AnimPhase =
+   | "folded"
+   | "unfolding"
+   | "chaining"
+   | "chained"
+   | "unchaining"
+   | "folding";
+
 export const Obj: React.FC<ObjProps> = React.memo(
    ({
       width = 160,
@@ -227,6 +246,10 @@ export const Obj: React.FC<ObjProps> = React.memo(
       oneAtATime = false,
       remainJoined = false,
       ytilt = false,
+      backfaceHidden = false,
+      chainEffects,
+      onChainComplete,
+      onChainReverseComplete,
       className,
       style,
    }) => {
@@ -241,11 +264,188 @@ export const Obj: React.FC<ObjProps> = React.memo(
       const animation1 = toAnimationShorthand(anim1) ?? undefined;
       const animation2 = toAnimationShorthand(anim2) ?? undefined;
 
+      /* ============================================================ */
+      /*  Chain-phase state machine                                    */
+      /* ============================================================ */
+
+      const [phase, setPhase] = React.useState<AnimPhase>(
+         flat ? "chained" : "folded"
+      );
+
+      const hasChain =
+         Array.isArray(chainEffects) && chainEffects.length > 0;
+
+      // Compute total unfold duration (includes stagger)
+      const sideCountRef = React.useRef(0);
+
+      // Max chain-effect duration (effect duration + effect delay)
+      const chainDur = React.useMemo(() => {
+         if (!hasChain) return 0;
+         return Math.max(
+            0,
+            ...chainEffects!.map(
+               (e) => (e.duration ?? 0.5) + (e.delay ?? 0)
+            )
+         );
+      }, [chainEffects, hasChain]);
+
+      // React to `flat` prop changes
+      const prevFlatForChain = React.useRef(flat);
+      React.useEffect(() => {
+         if (flat === prevFlatForChain.current) return;
+         prevFlatForChain.current = flat;
+
+         if (flat) {
+            // Forward: start unfolding
+            setPhase("unfolding");
+         } else {
+            // Reverse: if chained, undo chain effects first
+            if (hasChain && (phase === "chained" || phase === "chaining")) {
+               setPhase("unchaining");
+            } else {
+               setPhase("folding");
+            }
+         }
+      }, [flat]); // intentionally minimal deps — phase is read, not a dep
+
+      // Phase transition timers
+      React.useEffect(() => {
+         let timer: ReturnType<typeof setTimeout> | undefined;
+
+         if (phase === "unfolding") {
+            // Wait for unfold CSS transitions to finish, then chain
+            const sideCount = sideCountRef.current;
+            const unfoldDur = oneAtATime
+               ? transitionDuration * sideCount
+               : transitionDuration;
+            timer = setTimeout(() => {
+               if (hasChain) {
+                  setPhase("chaining");
+               } else {
+                  setPhase("chained");
+                  onChainComplete?.();
+               }
+            }, unfoldDur * 1000 + 60);
+         }
+
+         if (phase === "chaining") {
+            timer = setTimeout(() => {
+               setPhase("chained");
+               onChainComplete?.();
+            }, chainDur * 1000 + 60);
+         }
+
+         if (phase === "unchaining") {
+            timer = setTimeout(() => {
+               setPhase("folding");
+            }, chainDur * 1000 + 60);
+         }
+
+         if (phase === "folding") {
+            const sideCount = sideCountRef.current;
+            const foldDur = oneAtATime
+               ? transitionDuration * sideCount
+               : transitionDuration;
+            timer = setTimeout(() => {
+               setPhase("folded");
+               onChainReverseComplete?.();
+            }, foldDur * 1000 + 60);
+         }
+
+         return () => {
+            if (timer) clearTimeout(timer);
+         };
+      }, [
+         phase,
+         hasChain,
+         chainDur,
+         transitionDuration,
+         oneAtATime,
+         onChainComplete,
+         onChainReverseComplete,
+      ]);
+
+      // Derived booleans for rendering
+      const isFlatNow =
+         phase === "unfolding" ||
+         phase === "chaining" ||
+         phase === "chained" ||
+         phase === "unchaining";
+      const chainActive = phase === "chaining" || phase === "chained";
+
+      // Build a map of chain effects by face name for quick lookup
+      const chainMap = React.useMemo(() => {
+         const map = new Map<string, FaceChainEffect>();
+         if (chainEffects) {
+            for (const e of chainEffects) {
+               map.set(e.faceName, e);
+            }
+         }
+         return map;
+      }, [chainEffects]);
+
+      /** Merge chain-effect styles onto a face when chain is active */
+      function chainStyle(
+         faceName: string
+      ): React.CSSProperties {
+         const eff = chainMap.get(faceName);
+         if (!eff) return {};
+
+         const dur = (eff.duration ?? 0.5) + "s";
+         const delay = (eff.delay ?? 0) + "s";
+         const timing = eff.timing ?? "ease-in-out";
+
+         const props: string[] = [];
+         const styles: React.CSSProperties = {};
+
+         if (eff.scaleX !== undefined || eff.scaleY !== undefined) {
+            const sx = eff.scaleX ?? 1;
+            const sy = eff.scaleY ?? 1;
+            if (chainActive) {
+               styles.transform =
+                  (styles.transform ?? "") + ` scaleX(${sx}) scaleY(${sy})`;
+            }
+            props.push("transform");
+         }
+
+         if (eff.background !== undefined) {
+            if (chainActive) {
+               styles.background = eff.background;
+            }
+            props.push("background");
+         }
+
+         if (eff.opacity !== undefined) {
+            if (chainActive) {
+               styles.opacity = eff.opacity;
+            }
+            props.push("opacity");
+         }
+
+         // Build transition string for chain properties
+         if (props.length > 0) {
+            const transitionParts = props.map(
+               (p) => `${p} ${dur} ${timing} ${delay}`
+            );
+            styles.transition = transitionParts.join(", ");
+         }
+
+         return styles;
+      }
+
       // Determine which faces to render
       const faceList: FaceDef[] =
          faces && faces.length > 0
             ? faces
             : DEFAULT_FACE_NAMES.map((name) => ({ name }));
+
+      // Keep sideCountRef up to date for phase timer calculations
+      sideCountRef.current = faceList.filter((f) =>
+         ["front", "right", "back", "left"].includes(f.name)
+      ).length;
+
+      const bfv: React.CSSProperties["backfaceVisibility"] =
+         backfaceHidden ? "hidden" : "visible";
 
       const transitionCss = (delay = 0) =>
          `transform ${transitionDuration}s ease-in-out ${delay}s`;
@@ -299,7 +499,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
       const renderStandard = () =>
          faceList.map((face, i) => {
             const dims = faceDimensions(face.name, w, h, d);
-            const transform = flat
+            const baseTransform = isFlatNow
                ? faceTransformFlat(face.name, w, h, d)
                : faceTransform3D(face.name, w, h, d);
 
@@ -314,16 +514,32 @@ export const Obj: React.FC<ObjProps> = React.memo(
                ? (idx >= 0 ? idx : i) * transitionDuration
                : 0;
 
+            // Merge chain-effect styles
+            const cStyle = chainStyle(face.name);
+            // Chain scale is appended to the flat transform
+            const scaleAppend =
+               cStyle.transform
+                  ? ` ${cStyle.transform}`
+                  : "";
+            const transform = baseTransform + scaleAppend;
+            // Build combined transition: fold transition + chain transitions
+            const foldTransition = transitionCss(delay);
+            const combinedTransition = cStyle.transition
+               ? `${foldTransition}, ${cStyle.transition}`
+               : foldTransition;
+
             return (
                <div
                   key={face.name + "-" + i}
                   className={fCls}
                   style={{
                      ...fStyle,
+                     ...cStyle,
                      width: dims.width,
                      height: dims.height,
                      transform,
-                     transition: transitionCss(delay),
+                     transition: combinedTransition,
+                     backfaceVisibility: bfv,
                   }}
                >
                   {body}
@@ -374,19 +590,41 @@ export const Obj: React.FC<ObjProps> = React.memo(
                className: fCls,
                body,
             } = faceAppearance(face, globalDef);
+
+            // Chain effect styles
+            const cStyle = chainStyle(face.name);
+            // If chain has a scale transform, append it to existing transform
+            const baseTransform = extra.transform ?? "";
+            const scaleAppend = cStyle.transform
+               ? ` ${cStyle.transform}`
+               : "";
+            const mergedTransform = baseTransform
+               ? `${baseTransform}${scaleAppend}`
+               : scaleAppend || undefined;
+
+            const foldTransition =
+               (extra.transition as string) ?? "";
+            const combinedTransition = cStyle.transition
+               ? `${foldTransition}, ${cStyle.transition}`
+               : foldTransition;
+
             return (
                <div
                   key={key}
                   className={fCls}
                   style={{
                      ...fStyle,
+                     ...cStyle,
                      width: dims.width,
                      height: dims.height,
                      display: "flex",
                      alignItems: "center",
                      justifyContent: "center",
                      boxSizing: "border-box",
+                     backfaceVisibility: bfv,
                      ...extra,
+                     transform: mergedTransform ?? extra.transform,
+                     transition: combinedTransition || extra.transition,
                   }}
                >
                   {body}
@@ -404,7 +642,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                      position: "absolute",
                      left: "50%",
                      top: "50%",
-                     transform: flat
+                     transform: isFlatNow
                         ? "translate(-50%, -50%)"
                         : `translate(-50%, -50%) translateZ(${d / 2}px)`,
                      transition: transitionCss(0),
@@ -422,7 +660,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                      height: 0,
                      transformOrigin: "0 0",
                      transformStyle: "preserve-3d",
-                     transform: flat
+                     transform: isFlatNow
                         ? "none"
                         : `translateZ(${d / 2}px) rotateY(90deg)`,
                      transition: transitionCss(step),
@@ -451,7 +689,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                         height: 0,
                         transformOrigin: "0 0",
                         transformStyle: "preserve-3d",
-                        transform: flat
+                        transform: isFlatNow
                            ? "none"
                            : "rotateY(90deg)",
                         transition: transitionCss(step * 2),
@@ -480,7 +718,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                            height: 0,
                            transformOrigin: "0 0",
                            transformStyle: "preserve-3d",
-                           transform: flat
+                           transform: isFlatNow
                               ? "none"
                               : "rotateY(90deg)",
                            transition: transitionCss(step * 3),
@@ -505,7 +743,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                {/* ---- Non-side faces (top, bottom, etc.) ---- */}
                {otherFaces.map((face, i) => {
                   const dims = faceDimensions(face.name, w, h, d);
-                  const xform = flat
+                  const xform = isFlatNow
                      ? faceTransformFlat(face.name, w, h, d)
                      : faceTransform3D(face.name, w, h, d);
                   const {
@@ -523,6 +761,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                            height: dims.height,
                            transform: xform,
                            transition: transitionCss(0),
+                           backfaceVisibility: bfv,
                         }}
                      >
                         {body}
@@ -570,7 +809,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                   className="anim3d-wrapper"
                   style={{
                      ...cssVars,
-                     animation: flat ? "none" : animation1,
+                     animation: isFlatNow ? "none" : animation1,
                      transformStyle: "preserve-3d",
                      transition: transitionCss(),
                   }}
@@ -580,7 +819,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                      className="anim3d-wrapper"
                      style={{
                         ...cssVars,
-                        animation: flat ? "none" : animation2,
+                        animation: isFlatNow ? "none" : animation2,
                         transformStyle: "preserve-3d",
                         transition: transitionCss(),
                      }}
