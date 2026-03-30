@@ -371,6 +371,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
          phase === "chaining" ||
          phase === "chained" ||
          phase === "unchaining";
+
       const chainActive = phase === "chaining" || phase === "chained";
 
       // Build a map of chain effects by face name for quick lookup
@@ -384,50 +385,88 @@ export const Obj: React.FC<ObjProps> = React.memo(
          return map;
       }, [chainEffects]);
 
-      /** Merge chain-effect styles onto a face when chain is active */
+      // Inject a CSS @keyframes rule for a chain effect and return its name.
+      // The keyframe approach is used instead of CSS transitions because
+      // transitions are unreliable in nested preserve-3d / hinge contexts —
+      // React's render cycle can commit the transition and target value in
+      // the same paint frame, causing the browser to skip the animation.
+      const chainKeyframeCache = React.useRef(new Map<string, string>());
+
+      function getChainKeyframes(
+         faceName: string,
+         eff: FaceChainEffect,
+         baseTransform: string,
+         reverse: boolean
+      ): string {
+         const sx = eff.scaleX ?? 1;
+         const sy = eff.scaleY ?? 1;
+         const dir = reverse ? "rev" : "fwd";
+         const cacheKey = `${faceName}-${sx}-${sy}-${dir}-${baseTransform}`;
+         const cached = chainKeyframeCache.current.get(cacheKey);
+         if (cached) return cached;
+
+         const fromScale = reverse
+            ? `scaleX(${sx}) scaleY(${sy})`
+            : `scaleX(1) scaleY(1)`;
+         const toScale = reverse
+            ? `scaleX(1) scaleY(1)`
+            : `scaleX(${sx}) scaleY(${sy})`;
+         const name = `anim3d-chain-${faceName}-${dir}-${Date.now()}`;
+
+         let styleEl = document.getElementById("anim3d-chain-keyframes");
+         if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = "anim3d-chain-keyframes";
+            document.head.appendChild(styleEl);
+         }
+         styleEl.textContent += `\n@keyframes ${name} {
+  from { transform: ${baseTransform} ${fromScale}; }
+  to   { transform: ${baseTransform} ${toScale}; }
+}\n`;
+         chainKeyframeCache.current.set(cacheKey, name);
+         return name;
+      }
+
+      /** Merge chain-effect styles onto a face when chain is active.
+       *  Uses CSS @keyframes animations for reliable timing. */
       function chainStyle(
-         faceName: string
+         faceName: string,
+         baseTransform?: string
       ): React.CSSProperties {
          const eff = chainMap.get(faceName);
          if (!eff) return {};
 
-         const dur = (eff.duration ?? 0.5) + "s";
-         const delay = (eff.delay ?? 0) + "s";
+         const dur = eff.duration ?? 0.5;
+         const delay = eff.delay ?? 0;
          const timing = eff.timing ?? "ease-in-out";
-
-         const props: string[] = [];
          const styles: React.CSSProperties = {};
+         const base = baseTransform ?? "";
 
-         if (eff.scaleX !== undefined || eff.scaleY !== undefined) {
-            const sx = eff.scaleX ?? 1;
-            const sy = eff.scaleY ?? 1;
+         const hasScale =
+            eff.scaleX !== undefined || eff.scaleY !== undefined;
+
+         if (hasScale) {
             if (chainActive) {
-               styles.transform =
-                  (styles.transform ?? "") + ` scaleX(${sx}) scaleY(${sy})`;
+               // Forward: animate from identity to target scale
+               const kfName = getChainKeyframes(faceName, eff, base, false);
+               styles.animation = `${kfName} ${dur}s ${timing} ${delay}s forwards`;
+            } else if (phase === "unchaining") {
+               // Reverse: animate from target scale back to identity
+               const kfName = getChainKeyframes(faceName, eff, base, true);
+               styles.animation = `${kfName} ${dur}s ${timing} ${delay}s forwards`;
             }
-            props.push("transform");
          }
 
          if (eff.background !== undefined) {
             if (chainActive) {
                styles.background = eff.background;
             }
-            props.push("background");
          }
 
          if (eff.opacity !== undefined) {
             if (chainActive) {
                styles.opacity = eff.opacity;
             }
-            props.push("opacity");
-         }
-
-         // Build transition string for chain properties
-         if (props.length > 0) {
-            const transitionParts = props.map(
-               (p) => `${p} ${dur} ${timing} ${delay}`
-            );
-            styles.transition = transitionParts.join(", ");
          }
 
          return styles;
@@ -514,19 +553,9 @@ export const Obj: React.FC<ObjProps> = React.memo(
                ? (idx >= 0 ? idx : i) * transitionDuration
                : 0;
 
-            // Merge chain-effect styles
-            const cStyle = chainStyle(face.name);
-            // Chain scale is appended to the flat transform
-            const scaleAppend =
-               cStyle.transform
-                  ? ` ${cStyle.transform}`
-                  : "";
-            const transform = baseTransform + scaleAppend;
-            // Build combined transition: fold transition + chain transitions
+            // Merge chain-effect styles (keyframe animation)
+            const cStyle = chainStyle(face.name, baseTransform);
             const foldTransition = transitionCss(delay);
-            const combinedTransition = cStyle.transition
-               ? `${foldTransition}, ${cStyle.transition}`
-               : foldTransition;
 
             return (
                <div
@@ -537,8 +566,8 @@ export const Obj: React.FC<ObjProps> = React.memo(
                      ...cStyle,
                      width: dims.width,
                      height: dims.height,
-                     transform,
-                     transition: combinedTransition,
+                     transform: baseTransform,
+                     transition: foldTransition,
                      backfaceVisibility: bfv,
                   }}
                >
@@ -591,22 +620,19 @@ export const Obj: React.FC<ObjProps> = React.memo(
                body,
             } = faceAppearance(face, globalDef);
 
-            // Chain effect styles
-            const cStyle = chainStyle(face.name);
-            // If chain has a scale transform, append it to existing transform
-            const baseTransform = extra.transform ?? "";
-            const scaleAppend = cStyle.transform
-               ? ` ${cStyle.transform}`
-               : "";
-            const mergedTransform = baseTransform
-               ? `${baseTransform}${scaleAppend}`
-               : scaleAppend || undefined;
+            // Chain effect styles (uses CSS keyframe animation)
+            const baseTransform = (extra.transform as string) ?? "";
+            const cStyle = chainStyle(face.name, baseTransform);
 
-            const foldTransition =
-               (extra.transition as string) ?? "";
-            const combinedTransition = cStyle.transition
-               ? `${foldTransition}, ${cStyle.transition}`
-               : foldTransition;
+            // Chain animation uses transform-origin to control alignment
+            const eff = chainMap.get(face.name);
+            const hasChainAnim = !!cStyle.animation;
+            let chainOrigin: string | undefined;
+            if (hasChainAnim && eff) {
+               const xOrigin = remainJoined && isFlatNow ? "left" : "center";
+               const yOrigin = eff.keepAligned ?? "center";
+               chainOrigin = `${xOrigin} ${yOrigin}`;
+            }
 
             return (
                <div
@@ -623,8 +649,7 @@ export const Obj: React.FC<ObjProps> = React.memo(
                      boxSizing: "border-box",
                      backfaceVisibility: bfv,
                      ...extra,
-                     transform: mergedTransform ?? extra.transform,
-                     transition: combinedTransition || extra.transition,
+                     ...(chainOrigin ? { transformOrigin: chainOrigin } : {}),
                   }}
                >
                   {body}
