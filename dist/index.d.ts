@@ -42,6 +42,10 @@ type FaceChainEffect = {
     duration?: number;
     delay?: number;
     timing?: TimingFn;
+    /** Keep the face aligned to its original top or bottom edge during
+     *  scale animations. Sets transform-origin on the Y-axis.
+     *  "top" = top edge stays fixed, "bottom" = bottom edge stays fixed. */
+    keepAligned?: "top" | "bottom";
 };
 type ObjProps = {
     width?: number;

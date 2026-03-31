@@ -11,15 +11,15 @@ const SPIN_OPTIONS: Record<string, AnimationConfig | undefined> = {
       name: "rockY",
       duration: 3,
       iterationCount: "infinite",
-      degreesHi: 5,
-      degreesLow: -45,
+      degreesHi: 0,
+      degreesLow: -15,
    },
    rockX: {
       name: "rockX",
       duration: 3,
       iterationCount: "infinite",
-      degreesHi: 5,
-      degreesLow: -45,
+      degreesHi: 6,
+      degreesLow: -5,
    },
 };
 
@@ -73,7 +73,7 @@ export default function CuboidFoldUnfold() {
 
    // Right face default dimensions come from depth × height
    const baseW = 150; // depth
-   const baseH = 150; // height
+   const baseH = 50; // height
    const [rightW, setRightW] = useState(baseW);
    const [rightH, setRightH] = useState(baseH);
    const [aligned, setAligned] = useState<"none" | "top" | "bottom">("none");
@@ -226,9 +226,9 @@ export default function CuboidFoldUnfold() {
 
          <div>
             <Obj
-               width={150}
-               height={150}
-               depth={150}
+               width={baseW}
+               height={baseH}
+               depth={baseW}
                perspective={600}
                flat={flat}
                transitionDuration={0.3}
@@ -244,7 +244,8 @@ export default function CuboidFoldUnfold() {
                              faceName: "right",
                              scaleX: rightW / baseW,
                              scaleY: rightH / baseH,
-                             duration: 1.2,
+                             duration: 0.3,
+                             timing: "ease-out",
                              ...(aligned !== "none"
                                 ? { keepAligned: aligned }
                                 : {}),
@@ -259,14 +260,29 @@ export default function CuboidFoldUnfold() {
                      display: "flex",
                      alignItems: "center",
                      justifyContent: "center",
-                     border: `1px solid #555`,
+                     //  border: `1px solid #555`,
                   },
                }}
                faces={[
-                  { name: "front", body: "" },
+                  {
+                     name: "front",
+                     body: "",
+                     style: {
+                        background: "rgba(39, 0, 179, 0.5)",
+                        borderLeft: `1px solid #1bcb15`,
+                        height: 50,
+                     },
+                  },
                   //   { name: "back", body: "Back" },
                   //   { name: "left", body: "Left" },
-                  { name: "right", body: "" },
+                  {
+                     name: "right",
+                     body: "",
+                     style: {
+                        background: "rgba(59, 232, 20, 1)",
+                        borderLeft: `1px solid #252525`,
+                     },
+                  },
                   // { name: "top", body: "Top" },
                   // { name: "bottom", body: "Bottom" },
                ]}

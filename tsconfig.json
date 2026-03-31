@@ -11,8 +11,12 @@
       "esModuleInterop": true,
       "skipLibCheck": true,
       "resolveJsonModule": true,
-      "rootDir": "./src",
-      "outDir": "dist-types"
+      "rootDir": ".",
+      "outDir": "dist-types",
+      "baseUrl": ".",
+      "paths": {
+         "@/*": ["examples/*"]
+      }
    },
-   "include": ["src"]
+   "include": ["src", "examples"]
 }

@@ -302,39 +302,59 @@ var Obj = React.memo(
       }
       return map;
     }, [chainEffects]);
-    function chainStyle(faceName) {
+    const chainKeyframeCache = React.useRef(/* @__PURE__ */ new Map());
+    function getChainKeyframes(faceName, eff, baseTransform, reverse) {
+      const sx = eff.scaleX ?? 1;
+      const sy = eff.scaleY ?? 1;
+      const dir = reverse ? "rev" : "fwd";
+      const cacheKey = `${faceName}-${sx}-${sy}-${dir}-${baseTransform}`;
+      const cached = chainKeyframeCache.current.get(cacheKey);
+      if (cached) return cached;
+      const fromScale = reverse ? `scaleX(${sx}) scaleY(${sy})` : `scaleX(1) scaleY(1)`;
+      const toScale = reverse ? `scaleX(1) scaleY(1)` : `scaleX(${sx}) scaleY(${sy})`;
+      const name = `anim3d-chain-${faceName}-${dir}-${Date.now()}`;
+      let styleEl = document.getElementById("anim3d-chain-keyframes");
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = "anim3d-chain-keyframes";
+        document.head.appendChild(styleEl);
+      }
+      styleEl.textContent += `
+@keyframes ${name} {
+  from { transform: ${baseTransform} ${fromScale}; }
+  to   { transform: ${baseTransform} ${toScale}; }
+}
+`;
+      chainKeyframeCache.current.set(cacheKey, name);
+      return name;
+    }
+    function chainStyle(faceName, baseTransform) {
       const eff = chainMap.get(faceName);
       if (!eff) return {};
-      const dur = (eff.duration ?? 0.5) + "s";
-      const delay = (eff.delay ?? 0) + "s";
+      const dur = eff.duration ?? 0.5;
+      const delay = eff.delay ?? 0;
       const timing = eff.timing ?? "ease-in-out";
-      const props = [];
       const styles = {};
-      if (eff.scaleX !== void 0 || eff.scaleY !== void 0) {
-        const sx = eff.scaleX ?? 1;
-        const sy = eff.scaleY ?? 1;
+      const base = baseTransform ?? "";
+      const hasScale = eff.scaleX !== void 0 || eff.scaleY !== void 0;
+      if (hasScale) {
         if (chainActive) {
-          styles.transform = (styles.transform ?? "") + ` scaleX(${sx}) scaleY(${sy})`;
+          const kfName = getChainKeyframes(faceName, eff, base, false);
+          styles.animation = `${kfName} ${dur}s ${timing} ${delay}s forwards`;
+        } else if (phase === "unchaining") {
+          const kfName = getChainKeyframes(faceName, eff, base, true);
+          styles.animation = `${kfName} ${dur}s ${timing} ${delay}s forwards`;
         }
-        props.push("transform");
       }
       if (eff.background !== void 0) {
         if (chainActive) {
           styles.background = eff.background;
         }
-        props.push("background");
       }
       if (eff.opacity !== void 0) {
         if (chainActive) {
           styles.opacity = eff.opacity;
         }
-        props.push("opacity");
-      }
-      if (props.length > 0) {
-        const transitionParts = props.map(
-          (p) => `${p} ${dur} ${timing} ${delay}`
-        );
-        styles.transition = transitionParts.join(", ");
       }
       return styles;
     }
@@ -380,11 +400,8 @@ var Obj = React.memo(
       } = faceAppearance(face, globalDef);
       const idx = STAGGER_ORDER.indexOf(face.name);
       const delay = oneAtATime ? (idx >= 0 ? idx : i) * transitionDuration : 0;
-      const cStyle = chainStyle(face.name);
-      const scaleAppend = cStyle.transform ? ` ${cStyle.transform}` : "";
-      const transform = baseTransform + scaleAppend;
+      const cStyle = chainStyle(face.name, baseTransform);
       const foldTransition = transitionCss(delay);
-      const combinedTransition = cStyle.transition ? `${foldTransition}, ${cStyle.transition}` : foldTransition;
       return /* @__PURE__ */ jsx(
         "div",
         {
@@ -394,8 +411,8 @@ var Obj = React.memo(
             ...cStyle,
             width: dims.width,
             height: dims.height,
-            transform,
-            transition: combinedTransition,
+            transform: baseTransform,
+            transition: foldTransition,
             backfaceVisibility: bfv
           },
           children: body
@@ -426,12 +443,16 @@ var Obj = React.memo(
           className: fCls,
           body
         } = faceAppearance(face, globalDef);
-        const cStyle = chainStyle(face.name);
         const baseTransform = extra.transform ?? "";
-        const scaleAppend = cStyle.transform ? ` ${cStyle.transform}` : "";
-        const mergedTransform = baseTransform ? `${baseTransform}${scaleAppend}` : scaleAppend || void 0;
-        const foldTransition = extra.transition ?? "";
-        const combinedTransition = cStyle.transition ? `${foldTransition}, ${cStyle.transition}` : foldTransition;
+        const cStyle = chainStyle(face.name, baseTransform);
+        const eff = chainMap.get(face.name);
+        const hasChainAnim = !!cStyle.animation;
+        let chainOrigin;
+        if (hasChainAnim && eff) {
+          const xOrigin = remainJoined && isFlatNow ? "left" : "center";
+          const yOrigin = eff.keepAligned ?? "center";
+          chainOrigin = `${xOrigin} ${yOrigin}`;
+        }
         return /* @__PURE__ */ jsx(
           "div",
           {
@@ -447,8 +468,7 @@ var Obj = React.memo(
               boxSizing: "border-box",
               backfaceVisibility: bfv,
               ...extra,
-              transform: mergedTransform ?? extra.transform,
-              transition: combinedTransition || extra.transition
+              ...chainOrigin ? { transformOrigin: chainOrigin } : {}
             },
             children: body
           },

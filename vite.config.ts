@@ -13,6 +13,7 @@ export default defineConfig({
       alias: {
          // Import from live source, not dist
          "anim-3d-obj": path.resolve(__dirname, "src/index.ts"),
+         "@": path.resolve(__dirname, "examples"),
       },
    },
 });
